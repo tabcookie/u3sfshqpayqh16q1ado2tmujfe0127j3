@@ -1,5 +1,11 @@
 # Journal des versions
 
+## v1.12 — 17 nov. 2026
+- Livre : plus de bannières « Ça s'est réparé ? ». Sur chaque moment (toutes couleurs) : « ↩ Revenir dessus ? » replié → Ça s'est réparé ? Oui · Non · Pas vraiment + note, Tu lui en veux ? 🟢🟠🔴⚫.
+- Moments du Livre sur 2 lignes (heure · Qui · photos / note ou tuiles) + « ▾ Détails » qui déplie tout par blocs (Elle, Ma réaction, Moi, Après coup).
+- « Qui ? Elle » ouvre toujours l'écran « Ma réaction » : par tuile, boutons couleur, note toujours visible, tuiles en option ; les anciennes tuiles « ce que j'ai fait » restent affichées en lecture.
+- Tuiles : « Risque d'engueulade » passe en orange ; rouge : « Marcher sur des œufs » (au lieu de Communication risquée), « Grosse défensive / Mur » (remplace Défensive et Mur, comptée pour les deux cavaliers), + « Escalade », − « A crié ».
+
 ## v1.11 — 17 nov. 2026
 - Tuiles : ⚫ Elle + « Énervement fort », « Flagellation / victimisation » ; réactions ⚫ + « À bout de nerfs », 🔴 + « Épuisé ». Les tuiles ajoutées restent (faits, ressentis, réactions).
 - « Ma réaction » tuile par tuile : pour chaque chose qu'elle a faite, sa couleur et ses tuiles (toutes les couleurs de pastille). Les réactions v1.10 restent lisibles (« dans l'ensemble »).

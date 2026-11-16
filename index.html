@@ -43,8 +43,14 @@ h1{font-size:22px;margin:4px 0 4px}
 .dot.sm.c-k{box-shadow:0 0 0 1px #8A8A94}
 .item{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);width:100%;background:none;border-left:none;border-right:none;border-top:none;text-align:left;color:var(--text)}
 .item:last-child,.entrywrap:last-child .item{border-bottom:none}
-.entrywrap{position:relative}
-.rattbtn{position:absolute;right:0;top:50%;transform:translateY(-50%);width:44px;height:44px;border-radius:22px;border:1px solid var(--border);background:var(--bg);color:var(--accent);font-size:20px}
+.entrywrap{position:relative;border-bottom:1px solid var(--border)}
+.entrywrap .item{border-bottom:none}
+.etools{display:flex;gap:14px;padding:0 0 10px 28px}
+.etools button{background:none;border:none;color:var(--accent);font-size:13px;padding:4px 0}
+.dpanel{margin:0 0 12px 28px;padding:10px 12px;border-radius:12px;background:var(--bg);border:1px solid var(--border)}
+.dblk+.dblk{margin-top:10px}
+.dl{font-size:14px;line-height:1.45;margin-top:3px}
+.rattbtn{position:absolute;right:0;top:12px;width:44px;height:44px;border-radius:22px;border:1px solid var(--border);background:var(--bg);color:var(--accent);font-size:20px}
 .pills{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
 .pill{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;background:var(--bg);border:1px solid var(--border);font-size:13px}
 .pill .dot{width:10px;height:10px}
@@ -161,14 +167,17 @@ const GOOD_TILES = {
 const TILES = {
   w: GOOD_TILES,
   g: GOOD_TILES,
-  o: {acts:['Oubli','Mauvaise interprétation','Petit reproche','Pas de vaisselle','Trop de téléphone','Retard','Remarque sèche','Pas écouté(e)'],
+  o: {acts:['Oubli','Mauvaise interprétation','Petit reproche',"Risque d'engueulade",'Pas de vaisselle','Trop de téléphone','Retard','Remarque sèche','Pas écouté(e)'],
       feel:['Stress','Ennui','Flemme','Agacé(e)','Fatigué(e)']},
-  r: {acts:['Prise de tête','Accusation','Communication risquée',"Risque d'engueulade",'Critique','Défensive','Mur','A crié','Ton qui monte','Ignoré(e)'],
+  r: {acts:['Prise de tête','Accusation','Marcher sur des œufs','Escalade','Critique','Grosse défensive / Mur','Ton qui monte','Ignoré(e)'],
       feel:['Gros stress','Tendu(e)','Colère','Blessé(e)','Seul(e)','Épuisé(e)']},
   k: {acts:['Mépris','Accusation grave','Insultes / Humiliation','Phrase de trop','Énervement fort','Flagellation / victimisation','Reproches','Laisser tomber','Menace'], moiActs:['Éloignement urgent'],
       feel:['Stress énorme','Rage','Humilié(e)','Abandonné(e)','Dégoûté(e)','Brisé(e)','Peur']}
 };
 const CAVALIERS = ['Critique','Mépris','Défensive','Mur'];
+const GDM = 'Grosse défensive / Mur';
+// « Grosse défensive / Mur » compte pour les deux cavaliers
+const cav = (m, k) => (m[k]||0) + (k === 'Défensive' || k === 'Mur' ? (m[GDM]||0) : 0);
 // ma réaction à ce qu'elle a fait : sa couleur à lui, indépendante de la pastille
 const REACT_TILES = {
   w:['Resté zen','Désamorcé avec humour','Geste tendre'],
@@ -183,7 +192,7 @@ const IMP = {n:'Neutre', o:'Important', r:'Urgent'};
 const ONP = {oui:'Oui', non:'Non', pv:'Pas vraiment'};
 const ENSEMBLE = "Dans l'ensemble";
 // réactions tuile par tuile (et anciens moments v1.10 : une seule réaction)
-const reactsOf = e => e.reacts && Object.keys(e.reacts).length ? Object.entries(e.reacts).filter(([,r]) => r && r.c) : (e.react && e.react.c ? [[ENSEMBLE, e.react]] : []);
+const reactsOf = e => e.reacts && Object.keys(e.reacts).length ? Object.entries(e.reacts).filter(([,r]) => r && (r.c || r.note)) : (e.react && e.react.c ? [[ENSEMBLE, e.react]] : []);
 const IMP_RANK = {r:0, o:1, n:2};
 const GRAVE = ['Mépris','Insulte','Insultes','Insultes / Humiliation'];
 // rattrapage : comment elle s'est rattrapée sur chaque tuile
@@ -193,7 +202,8 @@ const RATT_COLORS = ['o','r','k'];
 const devantLabel = () => 'Devant ' + ((S.settings.childName || '').trim() || "l'enfant");
 
 const QUI = {elle:'Elle', moi:'Moi', deux:'Les deux'};
-const REPAIR = {oui:'Oui', partie:'En partie', non:'Non'};
+const REPAIR = {oui:'Oui', non:'Non', pv:'Pas vraiment', partie:'En partie'};
+const REPAIR_OPTS = ['oui','non','pv'];
 
 /* ---------- utils ---------- */
 const $ = s => document.querySelector(s);
@@ -422,26 +432,45 @@ function entryLine(e){
   const parts = [e.time];
   if (e.qui) parts.push(QUI[e.qui]);
   if (e.devant) parts.push(devantLabel());
-  const tags = [...Object.keys(e.elle||{}).map(t => 'Elle : ' + t), ...Object.keys(e.moi||{}).map(t => 'Moi : ' + t)];
-  if (e.air) tags.push("J'ai pris l'air");
-  reactsOf(e).forEach(([t, r]) => tags.push('Ma réaction' + (t === ENSEMBLE ? '' : ' à ' + t) + ' : ' + COLORS[r.c].name.toLowerCase() + (Object.keys(r.tiles||{}).length ? ' (' + Object.keys(r.tiles).join(', ') + ')' : '')));
   const ph = (e.photos||[]).length + (e.ellePhotos||[]).length;
-  const txt = e.what || e.elleNote || (e.feel && e.feel.length ? e.feel.join(', ') : '');
-  const rt = e.ratt && e.ratt.ok === 'oui' ? Object.values(e.ratt.tiles || {}) : [];
-  const rattLine = [
-    e.ratt && e.ratt.ok ? 'Rattrapée : ' + (rt.length ? ['w','g','o'].filter(c => rt.some(r => r.lvl === c)).map(c => RATT[c].toLowerCase() + ' ' + rt.filter(r => r.lvl === c).length).join(' · ') : ONP[e.ratt.ok].toLowerCase()) : '',
-    e.excuse && e.excuse.v ? 'Excuses : ' + ONP[e.excuse.v].toLowerCase() : '',
-    e.grudge ? 'Je lui en veux : ' + COLORS[e.grudge].name.toLowerCase() : ''].filter(Boolean).join(' · ');
+  const tiles = Object.keys(e.elle||{}).length ? Object.keys(e.elle) : Object.keys(e.moi||{});
+  const txt = e.elleNote || e.what || (tiles.length ? tiles.slice(0,2).join(', ') + (tiles.length > 2 ? ' +' + (tiles.length - 2) : '') : '');
   const canRatt = RATT_COLORS.includes(e.color) && !sel;
+  const op = S.open || {};
+  const revState = [e.repair ? 'réparé : ' + REPAIR[e.repair].toLowerCase() : '', e.grudge ? `<span class="dot c-${e.grudge}" style="width:10px;height:10px"></span>` : ''].filter(Boolean).join(' · ');
   return `<div class="entrywrap"><button class="item${on ? ' selon' : ''}" data-entry="${e.id}" ${sel ? `aria-pressed="${on}"` : ''} ${canRatt ? 'style="padding-right:52px"' : ''}>
     ${sel ? `<span class="selbox" aria-hidden="true">${on ? '✓' : ''}</span>` : ''}<span class="dot c-${e.color}" style="margin-top:3px"></span>
     <span style="flex:1;min-width:0">
       <span class="between meta"><span>${esc(parts.join(' · '))}</span><span>${ph ? ph + ' photo' + (ph>1?'s':'') : ''}</span></span>
-      ${tags.length ? `<span class="meta" style="display:block;margin-top:2px">${esc(tags.join(' · '))}</span>` : ''}
-      <span class="txt ${txt ? '' : 'empty'}" style="display:block">${txt ? esc(txt) : 'À compléter : touche pour écrire'}</span>
-      ${e.repair ? `<span class="meta" style="display:block;margin-top:4px">Réparé : ${esc(REPAIR[e.repair])}</span>` : ''}
-      ${rattLine ? `<span class="meta" style="display:block;margin-top:4px">${esc(rattLine)}</span>` : ''}
-    </span></button>${canRatt ? `<button class="rattbtn" data-ratt="${e.id}" aria-label="Ajouter un rattrapage">↺</button>` : ''}</div>`;
+      <span class="txt ${txt ? '' : 'empty'}" style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${txt ? esc(txt) : 'À compléter : touche pour écrire'}</span>
+    </span></button>${canRatt ? `<button class="rattbtn" data-ratt="${e.id}" aria-label="Après coup">↺</button>` : ''}
+    ${sel ? '' : `<div class="etools"><button data-det="${e.id}" aria-expanded="${op[e.id] === 'd'}">${op[e.id] === 'd' ? '▴' : '▾'} Détails</button><button data-rev="${e.id}" aria-expanded="${op[e.id] === 'r'}">↩ Revenir dessus ?${revState ? ' <span class="row" style="display:inline-flex;gap:4px;color:var(--muted)">' + revState + '</span>' : ''}</button></div>
+    ${op[e.id] === 'd' ? detailsHTML(e) : ''}${op[e.id] === 'r' ? revHTML(e) : ''}`}</div>`;
+}
+// tout le détail d'un moment, rangé par blocs
+function detailsHTML(e){
+  const tl = (o, notes) => Object.keys(o).map(t => `<div class="dl"><b>${esc(t)}</b>${(notes||o)[t] ? ' — ' + esc((notes||o)[t]) : ''}</div>`).join('');
+  const blk = (title, inner) => inner ? `<div class="dblk"><div class="sub">${title}</div>${inner}</div>` : '';
+  const ar = Array.isArray;
+  const feelO = (a, n) => Object.fromEntries((a||[]).map(t => [t, (n||{})[t] || '']));
+  const reacts = reactsOf(e).map(([t, r]) => `<div class="dl">${t === ENSEMBLE ? '' : esc(t) + ' → '}${r.c ? `<span class="dot c-${r.c}" style="width:10px;height:10px;vertical-align:middle"></span> ` : ''}${esc(Object.keys(r.tiles||{}).map(k => k + (r.tiles[k] ? ' (' + r.tiles[k] + ')' : '')).join(', '))}${r.note ? ' — ' + esc(r.note) : ''}</div>`).join('');
+  const rt = Object.entries((e.ratt||{}).tiles || {});
+  const apres = [e.ratt && e.ratt.ok ? `<div class="dl">Rattrapée : ${ONP[e.ratt.ok]}${e.ratt.how ? ' — ' + esc(e.ratt.how) : ''}</div>` : '',
+    rt.map(([t,r]) => `<div class="dl">${esc(t)} : ${RATT[r.lvl]}${r.how ? ' — ' + esc(r.how) : ''}</div>`).join(''),
+    e.excuse && e.excuse.v ? `<div class="dl">Excuses : ${ONP[e.excuse.v]}${e.excuse.how ? ' — ' + esc(e.excuse.how) : ''}</div>` : ''].join('');
+  const out = blk('Elle', tl(e.elle||{}) + tl(feelO(e.elleFeel, e.elleFeelNotes)) + (e.elleNote ? `<div class="dl">${esc(e.elleNote)}</div>` : ''))
+    + blk('Ma réaction', reacts)
+    + blk('Moi', tl(e.moi||{}) + (e.air ? `<div class="dl">J'ai pris l'air</div>` : '') + (ar(e.feel) && e.feel.length ? `<div class="dl"><span class="sub">Je me sens : </span>${esc(e.feel.map(t => t + ((e.feelNotes||{})[t] ? ' (' + e.feelNotes[t] + ')' : '')).join(', '))}</div>` : '') + (e.what ? `<div class="dl">${esc(e.what)}</div>` : '') + (e.need ? `<div class="dl"><span class="sub">Besoin : </span>${esc(e.need)}</div>` : ''))
+    + blk('Après coup', apres);
+  return `<div class="dpanel">${out || '<div class="empty">Rien de détaillé.</div>'}</div>`;
+}
+function revHTML(e){
+  return `<div class="dpanel">
+    <div class="sub">Ça s'est réparé ?</div>
+    <div class="three">${REPAIR_OPTS.map(k => `<button data-rv="${e.id}" data-v="${k}" style="${e.repair===k ? 'border-color:var(--accent);background:var(--accent-bg);font-weight:700' : ''}" aria-pressed="${e.repair===k}">${REPAIR[k]}</button>`).join('')}</div>
+    <textarea data-rvnote="${e.id}" rows="2" style="margin-top:8px" placeholder="Note (facultatif)">${esc(e.repairNote || '')}</textarea>
+    <div class="sub" style="margin-top:12px">Tu lui en veux ?</div>
+    <div class="row" style="gap:14px;margin-top:8px">${['g','o','r','k'].map(c => `<button class="rattpick" data-rg="${e.id}" data-v="${c}" aria-pressed="${e.grudge===c}" aria-label="${COLORS[c].name}"><span class="dot c-${c}" style="width:30px;height:30px;border-radius:15px;${e.grudge===c ? 'outline:3px solid var(--accent);outline-offset:2px' : ''}"></span></button>`).join('')}</div></div>`;
 }
 function renderLivre(m){
   const t = todayStr();
@@ -474,7 +503,7 @@ function renderLivre(m){
     <div class="between" style="margin-bottom:10px"><span class="sub">Ajouter un moment</span><button class="iconbtn" id="settings" aria-label="Réglages" style="width:36px;height:36px;border:none;background:none">${ICON.gear}</button></div>
     <div class="pastilles">${ORDER.map(c => `<button class="pbtn c-${c}" data-new="${c}" aria-label="Pastille ${COLORS[c].name.toLowerCase()} : ${COLORS[c].label}"></button>`).join('')}</div>
   </section>
-  ${toRepair.map(e => `<div class="banner">
+  ${[].map(e => `<div class="banner">
     <div>${esc(shortDate(e.date))}, moment ${e.color === 'k' ? 'noir' : 'rouge'} à ${esc(e.time)}${(e.what||e.elleNote) ? ' : « ' + esc((e.what||e.elleNote).slice(0,60)) + ((e.what||e.elleNote).length>60?'…':'') + ' »' : ''}. <strong>Ça s'est réparé ?</strong></div>
     <div class="three">${Object.entries(REPAIR).map(([k,l]) => `<button data-repair="${e.id}" data-v="${k}">${l}</button>`).join('')}</div>
   </div>`).join('')}
@@ -511,7 +540,13 @@ function renderLivre(m){
     S.selMode = false; S.sel = new Set(); toast(n > 1 ? n + ' moments supprimés' : 'Moment supprimé'); render();
   };
   m.querySelectorAll('[data-ratt]').forEach(b => b.onclick = () => openEntry(b.dataset.ratt, null, null, 'ratt'));
-  m.querySelectorAll('[data-repair]').forEach(b => b.onclick = async () => { const e = S.items.find(x => x.id === b.dataset.repair); e.repair = b.dataset.v; await saveItem(e); toast('Noté'); render(); });
+  const tog = (id, k) => { S.open = S.open || {}; S.open[id] = S.open[id] === k ? '' : k; render(); };
+  m.querySelectorAll('[data-det]').forEach(b => b.onclick = () => tog(b.dataset.det, 'd'));
+  m.querySelectorAll('[data-rev]').forEach(b => b.onclick = () => tog(b.dataset.rev, 'r'));
+  const revSave = async (id, f) => { const e = S.items.find(x => x.id === id); const ta = m.querySelector(`[data-rvnote="${id}"]`); if (ta) e.repairNote = ta.value.trim(); f && f(e); await saveItem(e); };
+  m.querySelectorAll('[data-rvnote]').forEach(t => t.onchange = () => revSave(t.dataset.rvnote));
+  m.querySelectorAll('[data-rv]').forEach(b => b.onclick = async () => { await revSave(b.dataset.rv, e => e.repair = e.repair === b.dataset.v ? null : b.dataset.v); render(); });
+  m.querySelectorAll('[data-rg]').forEach(b => b.onclick = async () => { await revSave(b.dataset.rg, e => e.grudge = e.grudge === b.dataset.v ? '' : b.dataset.v); render(); });
   m.querySelectorAll('[data-note]').forEach(b => b.onclick = () => openNote(b.dataset.note));
   $('#quick').onclick = openQuick;
   m.querySelectorAll('[data-tri]').forEach(b => b.onclick = () => openTri(b.dataset.tri));
@@ -623,7 +658,7 @@ function openEntry(id, color, draft, startAt, prefill){
   // un écran par choix : Qui ? puis la personne choisie, puis l'autre
   // pas d'écran « comment elle se sent » : il ne peut pas savoir à sa place
   // « Qui ? Elle » : ma réaction remplace « ce que j'ai fait » (gardé pour « Les deux » et les anciens moments)
-  const useReact = () => e.qui === 'elle' && !Object.keys(e.moi).length && !e.air;
+  const useReact = () => e.qui === 'elle';
   const sideSteps = s => s === 'elle' ? ['elleAct','elleNote'] : [useReact() ? 'moiReact' : 'moiAct','moiFeel','moiNote'];
   const steps = () => { const o = e.qui === 'moi' ? ['moi','elle'] : ['elle','moi']; return ['qui', ...o.flatMap(sideSteps), ...(RATT_COLORS.includes(e.color) ? ['ratt'] : [])]; };
   if (startAt) step = Math.max(0, steps().indexOf(startAt));
@@ -700,7 +735,7 @@ function openEntry(id, color, draft, startAt, prefill){
   function stepHasContent(k){
     if (k === 'qui') return !!e.qui;
     if (k === 'ratt') return !!(e.ratt.ok || e.excuse.v || e.grudge);
-    if (k === 'moiReact') return reactRows().some(rt => e.reacts[rt] && e.reacts[rt].c);
+    if (k === 'moiReact') return reactRows().some(rt => e.reacts[rt] && (e.reacts[rt].c || e.reacts[rt].note));
     const side = k.startsWith('elle') ? 'elle' : 'moi';
     if (k.endsWith('Act')) return Object.keys(e[side]).length > 0 || (side === 'moi' && e.air);
     if (k.endsWith('Feel')) return e[feelKey(side)].length > 0;
@@ -737,7 +772,9 @@ function openEntry(id, color, draft, startAt, prefill){
     if (k === 'moiReact') return `<small class="hint" style="margin-top:10px">Pour chaque chose qu'elle a faite, la couleur de ta réaction (elle peut être différente de la sienne), puis tes tuiles.</small>
       ${reactRows().map(rt => { const r = rowOf(rt); return `<div class="side"><div style="font-weight:700">${rt === ENSEMBLE ? ENSEMBLE : 'Elle : ' + esc(rt)}</div>
       <div class="pastilles" style="margin-top:8px">${ORDER.map(c => `<button class="pbtn c-${c}" data-rcol="${c}" data-rt="${esc(rt)}" style="width:42px;height:42px;${r.c===c ? 'outline:3px solid var(--accent);outline-offset:3px' : ''}" aria-pressed="${r.c===c}" aria-label="Réaction ${COLORS[c].name.toLowerCase()}"></button>`).join('')}</div>
-      ${r.c ? `<div style="margin-top:12px">${reactChips(rt)}</div>` : ''}</div>`; }).join('')}`;
+      <textarea data-rnote="${esc(rt)}" rows="2" style="margin-top:10px" placeholder="Note (facultatif)">${esc(r.note || '')}</textarea>
+      ${r.c ? `<div style="margin-top:10px">${reactChips(rt)}</div>` : ''}</div>`; }).join('')}
+      ${Object.keys(e.moi).length || e.air ? `<small class="hint" style="margin-top:12px">Noté avant (ce que j'ai fait) : ${esc([...Object.entries(e.moi).map(([t,v]) => t + (v ? ' — ' + v : '')), ...(e.air ? ["J'ai pris l'air"] : [])].join(' · '))}</small>` : ''}`;
     const side = k.startsWith('elle') ? 'elle' : 'moi';
     if (k.endsWith('Act')) return `
       ${needsSuggestion() ? `<div class="banner warn"><strong>${esc(GRAVE.find(g => g in e.elle || g in e.moi))}, c'est sérieux.</strong> Ce serait plutôt une pastille rouge ? C'est toi qui choisis.
@@ -768,7 +805,7 @@ function openEntry(id, color, draft, startAt, prefill){
     <div class="steps" role="tablist" aria-label="Étapes">${st.map((s,i) => `<button data-goto="${i}" class="${i===step ? 'on' : ''} ${stepHasContent(s) ? 'done' : ''}" aria-label="Étape ${i+1} : ${esc(STEP_TITLE[s])}" ${i===step ? 'aria-current="step"' : ''}></button>`).join('')}</div>`;
     bodyEl.innerHTML = `<h2 class="steptitle">${esc(STEP_TITLE[k])}</h2>${body(k)}
       ${last && !isNew ? `<div class="q">Changer la couleur</div><div class="pastilles">${ORDER.map(c => `<button class="pbtn c-${c}" data-recolor="${c}" style="width:44px;height:44px;${c===e.color ? 'outline:3px solid var(--accent);outline-offset:3px' : ''}" aria-label="Passer en ${COLORS[c].name.toLowerCase()}"></button>`).join('')}</div>` : ''}
-      ${last && !isNew && (e.color === 'r' || e.color === 'k') ? `<div class="q">Ça s'est réparé ?</div><div class="three" style="margin-top:0">${Object.entries(REPAIR).map(([r,l]) => `<button data-rep="${r}" style="${e.repair===r ? 'border-color:var(--accent);background:var(--accent-bg);font-weight:600' : 'border-color:var(--border)'}">${l}</button>`).join('')}</div>` : ''}
+      ${last && !isNew ? `<div class="q">Ça s'est réparé ?</div><div class="three" style="margin-top:0">${REPAIR_OPTS.map(r => [r, REPAIR[r]]).map(([r,l]) => `<button data-rep="${r}" style="${e.repair===r ? 'border-color:var(--accent);background:var(--accent-bg);font-weight:600' : 'border-color:var(--border)'}">${l}</button>`).join('')}</div>` : ''}
       ${last && !isNew ? `<button class="btn danger block" id="edel" style="margin-top:20px">Supprimer ce moment</button>` : ''}
       <div style="height:20px"></div>`;
     footEl.innerHTML = `${step > 0 ? `<button class="btn" id="eprev" aria-label="Écran précédent">‹ Retour</button>` : ''}
@@ -784,6 +821,7 @@ function openEntry(id, color, draft, startAt, prefill){
     const w = ov.querySelector('#ewhat'), n = ov.querySelector('#eneed'), en = ov.querySelector('#enote'), tm = ov.querySelector('#etime');
     if (w) e.what = w.value; if (n) e.need = n.value; if (en) e.elleNote = en.value; if (tm && tm.value) e.time = tm.value;
     ov.querySelectorAll('[data-rhow]').forEach(i => { const t = i.dataset.rhow; if (e.ratt.tiles[t]) e.ratt.tiles[t].how = i.value; });
+    ov.querySelectorAll('[data-rnote]').forEach(i => { rowOf(i.dataset.rnote).note = i.value; });
     const rh = ov.querySelector('[data-rhow2]'); if (rh) e.ratt.how = rh.value;
     const xh = ov.querySelector('[data-exhow]'); if (xh) e.excuse.how = xh.value;
   }
@@ -826,7 +864,7 @@ function openEntry(id, color, draft, startAt, prefill){
       Object.keys(e.moi).forEach(k => e.moi[k] = (e.moi[k]||'').trim());
       if (!steps().includes('moiReact')) e.reacts = {};
       const keep = reactRows();
-      Object.keys(e.reacts).forEach(k => { const r = e.reacts[k]; if (!r.c || !keep.includes(k)) delete e.reacts[k]; else Object.keys(r.tiles).forEach(t => r.tiles[t] = (r.tiles[t]||'').trim()); });
+      Object.keys(e.reacts).forEach(k => { const r = e.reacts[k]; r.note = (r.note || '').trim(); if (!r.c) r.tiles = {}; if ((!r.c && !r.note) || !keep.includes(k)) delete e.reacts[k]; else Object.keys(r.tiles).forEach(t => r.tiles[t] = (r.tiles[t]||'').trim()); });
       e.ratt.how = (e.ratt.how || '').trim(); e.excuse.how = (e.excuse.how || '').trim();
       e.what = e.what.trim(); e.need = e.need.trim(); e.elleNote = e.elleNote.trim();
       Object.values(e.ratt.tiles).forEach(r => r.how = (r.how || '').trim());
@@ -985,14 +1023,14 @@ function renderStats(m){
     const r = ratioOf(c);
     const elle = tagCounts(list, 'elle'), moi = tagCounts(list, 'moi');
     const qui = {elle:0, moi:0, deux:0}; list.forEach(e => { if (e.qui) qui[e.qui]++; });
-    const rep = {oui:0, partie:0, non:0}; list.filter(e => e.repair).forEach(e => rep[e.repair]++);
+    const rep = {oui:0, partie:0, non:0, pv:0}; list.filter(e => e.repair).forEach(e => rep[e.repair]++);
     const air = list.filter(e => e.air).length;
     const pairs = {}; const reactT = {};
-    list.forEach(e => reactsOf(e).forEach(([, r]) => { const k = e.color + r.c; pairs[k] = (pairs[k]||0) + 1; Object.keys(r.tiles||{}).forEach(t => reactT[t] = (reactT[t]||0) + 1); }));
+    list.forEach(e => reactsOf(e).filter(([, r]) => r.c).forEach(([, r]) => { const k = e.color + r.c; pairs[k] = (pairs[k]||0) + 1; Object.keys(r.tiles||{}).forEach(t => reactT[t] = (reactT[t]||0) + 1); }));
     const devant = list.filter(e => e.devant).length;
     const rt = {oui:0, non:0, pv:0}, ex = {oui:0, non:0, pv:0}, gr = {g:0, o:0, r:0, k:0};
     list.forEach(e => { if (e.ratt && e.ratt.ok) rt[e.ratt.ok]++; if (e.excuse && e.excuse.v) ex[e.excuse.v]++; if (e.grudge) gr[e.grudge]++; });
-    const maxCav = Math.max(1, ...CAVALIERS.map(k => (elle[k]||0) + (moi[k]||0)));
+    const maxCav = Math.max(1, ...CAVALIERS.map(k => cav(elle,k) + cav(moi,k)));
     const rColor = r === null ? 'var(--dim)' : (r >= 5 ? 'var(--g)' : r >= 1 ? 'var(--o)' : 'var(--r)');
     body.innerHTML = `${monthNav}
     <div class="grid2" style="margin-top:12px">
@@ -1003,12 +1041,12 @@ function renderStats(m){
     </div>
     <div class="card"><div class="sub" style="margin-bottom:8px">Moments par semaine</div>${weekChart(from, to)}</div>
     <div class="card"><div class="sub" style="margin-bottom:10px">Ce qui s'est joué (Elle / Moi)</div>
-      <div class="bars">${CAVALIERS.map(k => { const a = elle[k]||0, b = moi[k]||0; return `<span style="${k==='Mépris'?'font-weight:700':''}">${k}</span><div class="bar"><i style="width:${(a+b)/maxCav*100}%;background:${k==='Mépris'?'var(--r)':'var(--o)'}"></i></div><span>${a}/${b}</span>`; }).join('')}</div>
+      <div class="bars">${CAVALIERS.map(k => { const a = cav(elle,k), b = cav(moi,k); return `<span style="${k==='Mépris'?'font-weight:700':''}">${k}</span><div class="bar"><i style="width:${(a+b)/maxCav*100}%;background:${k==='Mépris'?'var(--r)':'var(--o)'}"></i></div><span>${a}/${b}</span>`; }).join('')}</div>
       ${topList('Autres chez elle', elle)}${topList('Autres chez moi', moi)}
       <small class="hint">Le mépris est le signe le plus grave d'après les recherches de Gottman.</small></div>
     <div class="grid2" style="margin-top:12px">
       <div class="card"><div class="sub">Qui ?</div><div style="font-size:14px;margin-top:6px;line-height:1.7">Elle ${qui.elle} · Moi ${qui.moi}<br>Les deux ${qui.deux}<br>${esc(devantLabel())} : ${devant}</div></div>
-      <div class="card"><div class="sub">Réparé ?</div><div style="font-size:14px;margin-top:6px;line-height:1.7">Oui ${rep.oui} · En partie ${rep.partie}<br>Non ${rep.non}</div></div>
+      <div class="card"><div class="sub">Réparé ?</div><div style="font-size:14px;margin-top:6px;line-height:1.7">Oui ${rep.oui} · Non ${rep.non}<br>Pas vraiment ${rep.pv}${rep.partie ? ' · En partie ' + rep.partie : ''}</div></div>
     </div>
     <div class="card"><div class="sub">Après coup</div><div style="font-size:14px;margin-top:6px;line-height:1.8">
       Rattrapée : oui ${rt.oui} · non ${rt.non} · pas vraiment ${rt.pv}<br>Excuses : oui ${ex.oui} · non ${ex.non} · pas vraiment ${ex.pv}<br>
@@ -1018,7 +1056,7 @@ function renderStats(m){
       ${allTiles("Ce qu'elle a fait", elle)}${Object.keys(feelCounts(list, 'elleFeel')).length ? allTiles('Comment elle se sent (avant v1.6)', feelCounts(list, 'elleFeel')) : ''}${allTiles("Ce que j'ai fait", moi)}${allTiles('Ma réaction', reactT)}${allTiles('Comment je me sens', feelCounts(list, 'feel'))}
       <small class="hint">« J'ai pris l'air » : ${air} fois</small></div>`;
     function allTiles(title, m2){ const o = topN(m2, 999); const mx = Math.max(1, ...o.map(x => x[1])); return `<div style="font-size:14px;font-weight:600;margin:12px 0 6px">${title}</div>${o.length ? `<div class="bars">${o.map(([k,v]) => `<span>${esc(k)}</span><div class="bar"><i style="width:${v/mx*100}%;background:${tileColor(k)}"></i></div><span>${v}</span>`).join('')}</div>` : '<span class="empty" style="font-size:13px">Rien encore</span>'}`; }
-    function topList(title, m2){ const o = topN(Object.fromEntries(Object.entries(m2).filter(([k]) => !CAVALIERS.includes(k))), 4); return o.length ? `<div style="font-size:13px;margin-top:10px"><span class="sub">${title} : </span>${o.map(([k,v]) => esc(k) + ' ' + v).join(' · ')}</div>` : ''; }
+    function topList(title, m2){ const o = topN(Object.fromEntries(Object.entries(m2).filter(([k]) => !CAVALIERS.includes(k) && k !== GDM)), 4); return o.length ? `<div style="font-size:13px;margin-top:10px"><span class="sub">${title} : </span>${o.map(([k,v]) => esc(k) + ' ' + v).join(' · ')}</div>` : ''; }
   }
   $('#mprev').onclick = () => shiftMonth(-1);
   $('#mnext').onclick = () => { if (S.calMonth < todayStr().slice(0,7)) shiftMonth(1); };
@@ -1112,7 +1150,7 @@ function bilanBlocks(from, to, kind){
   const fmtTop = (m2, n) => topN(m2, n).map(([k,x]) => esc(k) + (x > 1 ? ' ×' + x : '')).join(' · ');
   row('Chez elle', fmtTop(tagCounts(list,'elle'), 3));
   row('Chez toi', fmtTop(tagCounts(list,'moi'), 3));
-  const rc = {}; list.forEach(e => reactsOf(e).forEach(([,x]) => rc[x.c] = (rc[x.c]||0) + 1));
+  const rc = {}; list.forEach(e => reactsOf(e).forEach(([,x]) => { if (x.c) rc[x.c] = (rc[x.c]||0) + 1; }));
   row('Mes réactions', ORDER.filter(k => rc[k]).map(k => `<span class="dot c-${k}" style="width:10px;height:10px"></span> ${rc[k]}`).join(' &nbsp;'));
   row('Ressenti', fmtTop(feelCounts(list), 3));
   const reps = list.filter(e => e.color === 'r' || e.color === 'k');
@@ -1166,13 +1204,13 @@ function periodText(from, to, label){
         const fmtFeel = (a, n) => a.map(k => (n||{})[k] ? `${k} (${n[k]})` : k).join(', ');
         if (i.elleFeel && i.elleFeel.length) L.push(`  - Elle se sent : ${fmtFeel(i.elleFeel, i.elleFeelNotes)}`);
         if (i.elleNote) L.push(`  - Note sur elle : ${i.elleNote}`);
-        reactsOf(i).forEach(([t, r]) => L.push(`  - Ma réaction${t === ENSEMBLE ? '' : ' à « ' + t + ' »'} : ${sym[r.c]} ${COLORS[r.c].name}${Object.keys(r.tiles||{}).length ? ' — ' + fmt(r.tiles) : ''}`));
+        reactsOf(i).forEach(([t, r]) => L.push(`  - Ma réaction${t === ENSEMBLE ? '' : ' à « ' + t + ' »'} : ${r.c ? sym[r.c] + ' ' + COLORS[r.c].name : ''}${Object.keys(r.tiles||{}).length ? ' — ' + fmt(r.tiles) : ''}${r.note ? ' — note : ' + r.note : ''}`));
         if (Object.keys(i.moi||{}).length) L.push(`  - J'ai fait : ${fmt(i.moi)}`);
         if (i.feel && i.feel.length) L.push(`  - Je me sens : ${fmtFeel(i.feel, i.feelNotes)}`);
         if (i.what) L.push(`  - Ma note : ${i.what}`);
         if (i.air) L.push(`  - J'ai pris l'air`);
         if (i.need) L.push(`  - Ce dont j'aurais eu besoin : ${i.need}`);
-        if (i.repair) L.push(`  - Réparé : ${REPAIR[i.repair]}`);
+        if (i.repair) L.push(`  - Réparé : ${REPAIR[i.repair]}${i.repairNote ? ' (' + i.repairNote + ')' : ''}`);
         if (i.ratt && i.ratt.ok) { L.push(`  - Elle s'est rattrapée : ${ONP[i.ratt.ok]}${i.ratt.how ? ' (' + i.ratt.how + ')' : ''}`); Object.entries(i.ratt.tiles||{}).forEach(([t,r]) => L.push(`    - ${t} : ${RATT[r.lvl]}${r.how ? ' (' + r.how + ')' : ''}`)); }
         if (i.excuse && i.excuse.v) L.push(`  - Excuses : ${ONP[i.excuse.v]}${i.excuse.how ? ' (' + i.excuse.how + ')' : ''}`);
         if (i.grudge) L.push(`  - Je lui en veux : ${sym[i.grudge]} ${COLORS[i.grudge].name}`);

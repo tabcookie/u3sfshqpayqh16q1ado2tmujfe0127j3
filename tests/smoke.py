@@ -122,6 +122,18 @@ with sync_playwright() as p:
     check(pg.locator('.chip[data-side="elle"][data-tile="Insulte"].on').count() == 1, 'ancien moment : tuile disparue')
     pg.locator('[data-goto]').last.click(); pg.click('#eok'); pg.wait_for_timeout(300)
 
+    # 4b-bis. case « Devant… » (prénom réglé sur le téléphone)
+    pg.evaluate("S.settings.childName = 'Test'")
+    pg.click('[data-new="k"]')
+    check(pg.inner_text('#devant').endswith('Devant Test'), 'case « Devant… » absente ou sans le prénom')
+    pg.click('#devant'); pg.click('[data-qui="elle"]'); pg.wait_for_timeout(100)
+    check(pg.locator('.chip[data-side="elle"][data-tile="Accusation grave"]').count() == 1, 'tuile « Accusation grave » absente')
+    pg.locator('[data-goto]').last.click(); pg.click('#eok'); pg.wait_for_timeout(300)
+    check('Devant Test' in pg.inner_text('main'), 'case « Devant… » non enregistrée')
+    pg.click('[data-new="g"]')
+    check(pg.locator('#devant').count() == 0, 'case « Devant… » ne doit pas être sur une verte')
+    pg.click('[data-close]'); pg.wait_for_timeout(200)
+
     # 4c-bis. ↺ dans le Livre ouvre directement le rattrapage
     pg.click('[data-ratt="old1"]'); pg.wait_for_timeout(150)
     check(pg.inner_text('.steptitle').startswith('Elle s'), '↺ n\'ouvre pas l\'écran rattrapage')
@@ -130,7 +142,7 @@ with sync_playwright() as p:
 
     # 4d. blanche : valider direct
     pg.click('[data-new="w"]'); pg.click('#wquick'); pg.wait_for_timeout(300)
-    check(pg.locator('[data-entry]').count() == 5, 'blanche : « Valider direct » n\'enregistre pas')
+    check(pg.locator('[data-entry]').count() == 6, 'blanche : « Valider direct » n\'enregistre pas')
 
     # 5. note
     pg.fill('#newnote', 'Note de test'); pg.click('#addnote'); pg.wait_for_timeout(200)

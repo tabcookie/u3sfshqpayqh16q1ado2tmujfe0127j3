@@ -1,5 +1,9 @@
 # Journal des versions
 
+## v1.7 — 16 nov. 2026
+- Nouvelles tuiles : « Mauvaise interprétation » (orange), « Accusation » (rouge), « Accusation grave » (noire).
+- Case à cocher « Devant [prénom] » sur orange, rouge et noire ; prénom à régler dans Réglages (reste sur le téléphone) ; comptée dans les stats et les bilans.
+
 ## v1.6 — 16 nov. 2026
 - Noire : « Insultes / Humiliation » en une tuile, nouvelle tuile « Phrase de trop », « Dépassement de limite » retiré ; côté Moi « Éloignement urgent ».
 - « J'ai pris l'air » seulement sur l'orange.

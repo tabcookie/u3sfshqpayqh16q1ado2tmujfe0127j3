@@ -148,11 +148,11 @@ const GOOD_TILES = {
 const TILES = {
   w: GOOD_TILES,
   g: GOOD_TILES,
-  o: {acts:['Oubli','Petit reproche','Pas de vaisselle','Trop de téléphone','Retard','Remarque sèche','Pas écouté(e)'],
+  o: {acts:['Oubli','Mauvaise interprétation','Petit reproche','Pas de vaisselle','Trop de téléphone','Retard','Remarque sèche','Pas écouté(e)'],
       feel:['Stress','Ennui','Flemme','Agacé(e)','Fatigué(e)']},
-  r: {acts:['Prise de tête','Communication risquée',"Risque d'engueulade",'Critique','Défensive','Mur','A crié','Ton qui monte','Ignoré(e)'],
+  r: {acts:['Prise de tête','Accusation','Communication risquée',"Risque d'engueulade",'Critique','Défensive','Mur','A crié','Ton qui monte','Ignoré(e)'],
       feel:['Gros stress','Tendu(e)','Colère','Blessé(e)','Seul(e)','Épuisé(e)']},
-  k: {acts:['Mépris','Insultes / Humiliation','Phrase de trop','Reproches','Laisser tomber','Menace'], moiActs:['Éloignement urgent'],
+  k: {acts:['Mépris','Accusation grave','Insultes / Humiliation','Phrase de trop','Reproches','Laisser tomber','Menace'], moiActs:['Éloignement urgent'],
       feel:['Stress énorme','Rage','Humilié(e)','Abandonné(e)','Dégoûté(e)','Brisé(e)','Peur']}
 };
 const CAVALIERS = ['Critique','Mépris','Défensive','Mur'];
@@ -160,6 +160,8 @@ const GRAVE = ['Mépris','Insulte','Insultes','Insultes / Humiliation'];
 // rattrapage : comment elle s'est rattrapée sur chaque tuile
 const RATT = {w:'Totalement', g:'Le gros', o:'Un peu'};
 const RATT_COLORS = ['o','r','k'];
+// case « devant l'enfant » : le prénom est réglé sur le téléphone, jamais dans le code
+const devantLabel = () => 'Devant ' + ((S.settings.childName || '').trim() || "l'enfant");
 
 const QUI = {elle:'Elle', moi:'Moi', deux:'Les deux'};
 const REPAIR = {oui:'Oui', partie:'En partie', non:'Non'};
@@ -232,7 +234,7 @@ const DB = {
 /* ---------- state ---------- */
 const S = {
   items: [],            // entries (type:'e') and notes (type:'n')
-  settings: {pin:null, feel:[], acts:[], tiles:{}, reminder:'21:00', alertSeen:''},
+  settings: {pin:null, feel:[], acts:[], tiles:{}, childName:'', reminder:'21:00', alertSeen:''},
   unlocked: false,
   tab: 'livre',
   day: todayStr(),
@@ -384,6 +386,7 @@ function render(){
 function entryLine(e){
   const parts = [e.time];
   if (e.qui) parts.push(QUI[e.qui]);
+  if (e.devant) parts.push(devantLabel());
   const tags = [...Object.keys(e.elle||{}).map(t => 'Elle : ' + t), ...Object.keys(e.moi||{}).map(t => 'Moi : ' + t)];
   if (e.air) tags.push("J'ai pris l'air");
   const ph = (e.photos||[]).length + (e.ellePhotos||[]).length;
@@ -595,6 +598,7 @@ function openEntry(id, color, draft, startAt){
   }
   function body(k){
     if (k === 'qui') return `${e.color === 'w' && isNew ? `<button class="btn primary block" id="wquick" style="height:60px;font-size:18px;margin-top:14px">Journée parfaite · Valider direct</button><small class="hint">Ou détaille ci-dessous si tu en as envie.</small>` : ''}
+      ${RATT_COLORS.includes(e.color) ? `<button class="chip ${e.devant ? 'on' : ''}" id="devant" aria-pressed="${!!e.devant}" style="margin-top:14px">${e.devant ? '☑' : '☐'} ${esc(devantLabel())}</button>` : ''}
       <div class="sub" style="margin:14px 0 4px">Qui est en cause ?</div>
       <div style="display:flex;flex-direction:column;gap:10px;margin-top:10px">${Object.entries(QUI).map(([q,l]) => `<button class="btn block" data-qui="${q}" style="height:60px;font-size:18px;${e.qui===q ? 'border-color:var(--accent);background:var(--accent-bg);font-weight:700' : ''}" aria-pressed="${e.qui===q}">${l}</button>`).join('')}</div>
       <small class="hint" style="margin-top:12px">On passera ensuite par Elle et par Moi : sur chaque écran tu choisis, ou tu passes s'il n'y a rien.</small>`;
@@ -665,6 +669,7 @@ function openEntry(id, color, draft, startAt){
     ov.querySelectorAll('[data-side]').forEach(b => b.onclick = () => { syncText(); tapAct(b.dataset.side, b.dataset.tile); });
     ov.querySelectorAll('[data-addact]').forEach(b => b.onclick = async () => { syncText(); const v = (prompt(`Nom de ta tuile (${COLORS[e.color].name.toLowerCase()}, ce qui a été fait) :`) || '').trim(); if (!v) return; await addMyTile(e.color, 'acts', v); if (!(v in e[b.dataset.addact])) tapAct(b.dataset.addact, v); else redraw(); });
     ov.querySelectorAll('[data-addfeel]').forEach(b => b.onclick = async () => { syncText(); const v = (prompt(`Nom de ta tuile (${COLORS[e.color].name.toLowerCase()}, ressenti) :`) || '').trim(); if (!v) return; await addMyTile(e.color, 'feel', v); if (!e[feelKey(b.dataset.addfeel)].includes(v)) tapFeel(b.dataset.addfeel, v); else redraw(); });
+    const dv = ov.querySelector('#devant'); if (dv) dv.onclick = () => { syncText(); e.devant = !e.devant; redraw(); };
     ov.querySelectorAll('[data-rok]').forEach(b => b.onclick = () => { syncText(); e.ratt.ok = e.ratt.ok === b.dataset.rok ? '' : b.dataset.rok; redraw(); });
     ov.querySelectorAll('[data-rlvl]').forEach(b => b.onclick = () => { syncText(); const t = b.dataset.tile, r = e.ratt.tiles[t] || {}; if (r.lvl === b.dataset.rlvl) delete e.ratt.tiles[t]; else e.ratt.tiles[t] = {lvl:b.dataset.rlvl, how:r.how || ''}; redraw(); });
     const wq = ov.querySelector('#wquick'); if (wq) wq.onclick = async () => { syncText(); await saveItem(e); await close(); toast('Journée parfaite notée'); render(); };
@@ -783,6 +788,7 @@ function renderStats(m){
     const qui = {elle:0, moi:0, deux:0}; list.forEach(e => { if (e.qui) qui[e.qui]++; });
     const rep = {oui:0, partie:0, non:0}; list.filter(e => e.repair).forEach(e => rep[e.repair]++);
     const air = list.filter(e => e.air).length;
+    const devant = list.filter(e => e.devant).length;
     const rt = {oui:0, non:0, w:0, g:0, o:0}; list.forEach(e => { if (!e.ratt || !e.ratt.ok) return; rt[e.ratt.ok]++; Object.values(e.ratt.tiles||{}).forEach(r => rt[r.lvl]++); });
     const maxCav = Math.max(1, ...CAVALIERS.map(k => (elle[k]||0) + (moi[k]||0)));
     const rColor = r === null ? 'var(--dim)' : (r >= 5 ? 'var(--g)' : r >= 1 ? 'var(--o)' : 'var(--r)');
@@ -799,7 +805,7 @@ function renderStats(m){
       ${topList('Autres chez elle', elle)}${topList('Autres chez moi', moi)}
       <small class="hint">Le mépris est le signe le plus grave d'après les recherches de Gottman.</small></div>
     <div class="grid2" style="margin-top:12px">
-      <div class="card"><div class="sub">Qui ?</div><div style="font-size:14px;margin-top:6px;line-height:1.7">Elle ${qui.elle} · Moi ${qui.moi}<br>Les deux ${qui.deux}</div></div>
+      <div class="card"><div class="sub">Qui ?</div><div style="font-size:14px;margin-top:6px;line-height:1.7">Elle ${qui.elle} · Moi ${qui.moi}<br>Les deux ${qui.deux}<br>${esc(devantLabel())} : ${devant}</div></div>
       <div class="card"><div class="sub">Réparé ?</div><div style="font-size:14px;margin-top:6px;line-height:1.7">Oui ${rep.oui} · En partie ${rep.partie}<br>Non ${rep.non}</div></div>
     </div>
     <div class="card"><div class="sub">Elle s'est rattrapée ?</div><div style="font-size:14px;margin-top:6px;line-height:1.7">Oui ${rt.oui} · Non ${rt.non}<br>
@@ -920,7 +926,7 @@ function periodText(from, to, label){
       L.push(''); L.push(`### ${longDate(d)}`);
       items.forEach(i => {
         if (i.type === 'n') { L.push(`- ${i.time} · Note : ${i.text}`); return; }
-        L.push(`- ${i.time} ${sym[i.color]} ${COLORS[i.color].name}${i.qui ? ' · Qui : ' + QUI[i.qui] : ''}`);
+        L.push(`- ${i.time} ${sym[i.color]} ${COLORS[i.color].name}${i.qui ? ' · Qui : ' + QUI[i.qui] : ''}${i.devant ? ' · ' + devantLabel() : ''}`);
         const fmt = o => Object.entries(o||{}).map(([k,v]) => v ? `${k} (${v})` : k).join(', ');
         if (Object.keys(i.elle||{}).length) L.push(`  - Elle a fait : ${fmt(i.elle)}`);
         const fmtFeel = (a, n) => a.map(k => (n||{})[k] ? `${k} (${n[k]})` : k).join(', ');
@@ -967,6 +973,10 @@ function renderReglages(m){
     <small class="hint">Ouvre le menu de partage : choisis « Enregistrer dans Fichiers », puis ton dossier Umoral. Photos comprises.</small>
     <button class="btn block" id="restore" style="margin-top:12px">Restaurer une sauvegarde</button>
     <small class="hint">Attention : remplace tout ce qu'il y a dans l'appli par le contenu du fichier.</small></div>
+  <div class="card"><div style="font-weight:700">Case « Devant… »</div>
+    <label class="q" for="child" style="margin-top:10px">Prénom de l'enfant</label>
+    <input type="text" id="child" value="${esc(S.settings.childName || '')}" placeholder="Prénom">
+    <small class="hint">S'affiche sur la case à cocher des pastilles orange, rouge et noire. Reste sur ce téléphone.</small></div>
   <div class="card"><div style="font-weight:700">Rappel du soir</div>
     <label class="q" for="rem" style="margin-top:10px">Heure du rappel</label>
     <input type="time" id="rem" value="${esc(S.settings.reminder)}">
@@ -982,6 +992,7 @@ function renderReglages(m){
     <button class="btn block" id="lock" style="margin-top:8px">Verrouiller maintenant</button></div>
   <small class="hint" style="margin:14px 0">Umoral garde tout sur ce téléphone. Rien n'est envoyé sur Internet.</small>`;
   $('#back').onclick = () => { S.tab = 'livre'; render(); };
+  $('#child').onchange = async ev => { S.settings.childName = ev.target.value.trim(); await saveSettings(); toast('Enregistré'); };
   $('#rem').onchange = async ev => { S.settings.reminder = ev.target.value; await saveSettings(); render(); };
   $('#backup').onclick = backupAll;
   $('#restore').onclick = () => { const inp = $('#restoreInput'); inp.value = ''; inp.onchange = () => inp.files[0] && restoreAll(inp.files[0]); inp.click(); };

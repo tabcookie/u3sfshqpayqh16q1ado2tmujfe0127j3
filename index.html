@@ -38,6 +38,8 @@ h1{font-size:22px;margin:4px 0 4px}
 .dot{display:inline-block;width:16px;height:16px;border-radius:8px;flex-shrink:0}
 .dot.sm{width:8px;height:8px;border-radius:4px}
 .c-w{background:var(--w)} .c-g{background:var(--g)} .c-o{background:var(--o)} .c-r{background:var(--r)} .c-k{background:var(--k);box-shadow:0 0 0 2px #7A7A84}
+.c-n{background:#8A8F98}
+.jdone{text-decoration:line-through;color:var(--muted)}
 .dot.sm.c-k{box-shadow:0 0 0 1px #8A8A94}
 .item{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);width:100%;background:none;border-left:none;border-right:none;border-top:none;text-align:left;color:var(--text)}
 .item:last-child,.entrywrap:last-child .item{border-bottom:none}
@@ -110,8 +112,8 @@ textarea,input[type=text],input[type=time]{width:100%;background:var(--bg);borde
 .pin .dots{display:flex;gap:14px}
 .pin .dots i{width:14px;height:14px;border-radius:7px;border:2px solid var(--muted)}
 .pin .dots i.f{background:var(--text);border-color:var(--text)}
-.pad{display:grid;grid-template-columns:repeat(3,72px);gap:14px}
-.pad button{height:72px;border-radius:36px;border:none;background:var(--surface);font-size:26px;color:var(--text)}
+.pad{display:grid;grid-template-columns:repeat(3,92px);gap:16px 22px}
+.pad button{height:92px;border-radius:46px;touch-action:manipulation;border:none;background:var(--surface);font-size:26px;color:var(--text)}
 .pad button.blank{background:transparent}
 .toast{position:fixed;left:50%;bottom:calc(var(--safe-b) + 90px);transform:translateX(-50%);background:#2F2F37;color:var(--text);padding:10px 16px;border-radius:12px;font-size:14px;z-index:40}
 .bilan-text{font-size:15px;line-height:1.5}
@@ -159,6 +161,17 @@ const TILES = {
       feel:['Stress énorme','Rage','Humilié(e)','Abandonné(e)','Dégoûté(e)','Brisé(e)','Peur']}
 };
 const CAVALIERS = ['Critique','Mépris','Défensive','Mur'];
+// ma réaction à ce qu'elle a fait : sa couleur à lui, indépendante de la pastille
+const REACT_TILES = {
+  w:['Resté zen','Désamorcé avec humour','Geste tendre'],
+  g:['Resté calme',"J'ai écouté","J'ai expliqué",'Limite posée calmement'],
+  o:['Agacé','Soupir','Ton sec',"J'ai pris l'air"],
+  r:['Haussé le ton','Réponse piquante','Je me suis braqué'],
+  k:["J'ai explosé",'Éloignement urgent']
+};
+// Je vais : importance obligatoire
+const IMP = {n:'Neutre', o:'Important', r:'Urgent'};
+const IMP_RANK = {r:0, o:1, n:2};
 const GRAVE = ['Mépris','Insulte','Insultes','Insultes / Humiliation'];
 // rattrapage : comment elle s'est rattrapée sur chaque tuile
 const RATT = {w:'Totalement', g:'Le gros', o:'Un peu'};
@@ -197,6 +210,7 @@ const ICON = {
   stats:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/></svg>',
   bilan:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/><path d="M8 13h8M8 17h5"/></svg>',
   gear:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>',
+  jv:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2"/></svg>',
   close:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>'
 };
 
@@ -254,10 +268,11 @@ const byDay = d => S.items.filter(i => i.date === d).sort((a,b) => (a.time||'').
 // tuiles de base de la couleur + celles qu'il a ajoutées (pour cette couleur, ou avant v1.5 pour toutes)
 const myTiles = (c, kind) => ((S.settings.tiles || {})[c] || {})[kind] || [];
 const uniq = a => [...new Set(a)];
+const reactTiles = c => uniq([...REACT_TILES[c], ...myTiles(c, 'react')]);
 const feelTiles = c => uniq([...TILES[c].feel, ...myTiles(c, 'feel'), ...(S.settings.feel || [])]);
 const actTiles = (c, side) => uniq([...TILES[c].acts, ...(side === 'moi' ? TILES[c].moiActs || [] : []), ...myTiles(c, 'acts'), ...(S.settings.acts || [])]);
 async function addMyTile(c, kind, name){
-  if ((kind === 'acts' ? actTiles(c, 'moi') : feelTiles(c)).includes(name)) return;
+  if ((kind === 'acts' ? actTiles(c, 'moi') : kind === 'react' ? reactTiles(c) : feelTiles(c)).includes(name)) return;
   S.settings.tiles = S.settings.tiles || {};
   S.settings.tiles[c] = S.settings.tiles[c] || {acts:[], feel:[]};
   (S.settings.tiles[c][kind] = S.settings.tiles[c][kind] || []).push(name);
@@ -372,18 +387,19 @@ async function afterUnlock(){
     const d = await DB.get('kv', 'draft');
     if (d && d.v && d.v.e) { S.day = d.v.e.date; if (S.tab !== 'livre') { S.tab = 'livre'; render(); } openEntry(null, null, d.v); toast('Je t\'ai remis là où tu en étais'); }
   } catch(_) {}
+  checkJeVais();
 }
 
 /* ---------- shell ---------- */
 function render(){
   if (!S.unlocked) return renderPin();
   try { DB.put('kv', {k:'nav', v:{tab:S.tab, day:S.day, statsSeg:S.statsSeg, calMonth:S.calMonth, bilanSeg:S.bilanSeg}}); } catch(_) {}
-  const tabs = [['livre','Livre',ICON.book],['noires','Noires',ICON.black],['stats','Stats',ICON.stats],['bilans','Bilans',ICON.bilan]];
+  const tabs = [['livre','Livre',ICON.book],['noires','Noires',ICON.black],['stats','Stats',ICON.stats],['jevais','Je vais',ICON.jv],['bilans','Bilans',ICON.bilan]];
   $('#app').innerHTML = `<main id="main"></main>
   <nav class="tabs" aria-label="Navigation">${tabs.map(([k,l,i]) => `<button data-tab="${k}" class="${S.tab===k?'on':''}" ${S.tab===k?'aria-current="page"':''}>${i}${l}</button>`).join('')}</nav>`;
   $('#app').querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { S.tab = b.dataset.tab; if (S.tab === 'livre') S.day = todayStr(); render(); });
   const m = $('#main');
-  ({livre:renderLivre, noires:renderNoires, stats:renderStats, bilans:renderBilans, reglages:renderReglages}[S.tab] || renderLivre)(m);
+  ({livre:renderLivre, noires:renderNoires, stats:renderStats, jevais:renderJeVais, bilans:renderBilans, reglages:renderReglages}[S.tab] || renderLivre)(m);
 }
 
 /* ---------- LIVRE ---------- */
@@ -394,6 +410,7 @@ function entryLine(e){
   if (e.devant) parts.push(devantLabel());
   const tags = [...Object.keys(e.elle||{}).map(t => 'Elle : ' + t), ...Object.keys(e.moi||{}).map(t => 'Moi : ' + t)];
   if (e.air) tags.push("J'ai pris l'air");
+  if (e.react && e.react.c) tags.push('Ma réaction ' + COLORS[e.react.c].name.toLowerCase() + (Object.keys(e.react.tiles||{}).length ? ' : ' + Object.keys(e.react.tiles).join(', ') : ''));
   const ph = (e.photos||[]).length + (e.ellePhotos||[]).length;
   const txt = e.what || e.elleNote || (e.feel && e.feel.length ? e.feel.join(', ') : '');
   const rt = e.ratt && e.ratt.ok === 'oui' ? Object.values(e.ratt.tiles) : [];
@@ -566,7 +583,7 @@ function openEntry(id, color, draft, startAt, prefill){
   const fromNote = draft ? draft.fromNote : (prefill && prefill.fromNote);
   e.moi = e.moi || {}; e.elle = e.elle || {}; e.feel = e.feel || []; e.photos = e.photos || [];
   e.elleFeel = e.elleFeel || []; e.elleNote = e.elleNote || ''; e.ellePhotos = e.ellePhotos || [];
-  e.what = e.what || ''; e.need = e.need || ''; e.feelNotes = e.feelNotes || {}; e.elleFeelNotes = e.elleFeelNotes || {}; e.ratt = e.ratt || {ok:'', tiles:{}}; e.ratt.tiles = e.ratt.tiles || {};
+  e.what = e.what || ''; e.need = e.need || ''; e.feelNotes = e.feelNotes || {}; e.elleFeelNotes = e.elleFeelNotes || {}; e.ratt = e.ratt || {ok:'', tiles:{}}; e.ratt.tiles = e.ratt.tiles || {}; e.react = e.react || {c:'', tiles:{}}; e.react.tiles = e.react.tiles || {};
   let suggestionDismissed = draft ? !!draft.sug : false;
   const removedPhotos = draft ? (draft.removed || []) : [];
   const newPhotos = draft ? (draft.newPhotos || []).map(p => ({side:'moi', ...p})) : [];
@@ -587,10 +604,12 @@ function openEntry(id, color, draft, startAt, prefill){
 
   // un écran par choix : Qui ? puis la personne choisie, puis l'autre
   // pas d'écran « comment elle se sent » : il ne peut pas savoir à sa place
-  const sideSteps = s => s === 'elle' ? ['elleAct','elleNote'] : ['moiAct','moiFeel','moiNote'];
+  // « Qui ? Elle » : ma réaction remplace « ce que j'ai fait » (gardé pour « Les deux » et les anciens moments)
+  const useReact = () => e.qui === 'elle' && !Object.keys(e.moi).length && !e.air;
+  const sideSteps = s => s === 'elle' ? ['elleAct','elleNote'] : [useReact() ? 'moiReact' : 'moiAct','moiFeel','moiNote'];
   const steps = () => { const o = e.qui === 'moi' ? ['moi','elle'] : ['elle','moi']; return ['qui', ...o.flatMap(sideSteps), ...(RATT_COLORS.includes(e.color) ? ['ratt'] : [])]; };
   if (startAt) step = Math.max(0, steps().indexOf(startAt));
-  const STEP_TITLE = {qui:'Qui ?', elleAct:"Elle · ce qu'elle a fait", elleFeel:'Elle · comment elle se sent', elleNote:'Elle · note', moiAct:"Moi · ce que j'ai fait", moiFeel:'Moi · comment je me sens', moiNote:'Moi · note', ratt:"Elle s'est rattrapée ?"};
+  const STEP_TITLE = {qui:'Qui ?', elleAct:"Elle · ce qu'elle a fait", elleFeel:'Elle · comment elle se sent', elleNote:'Elle · note', moiAct:"Moi · ce que j'ai fait", moiReact:'Moi · ma réaction', moiFeel:'Moi · comment je me sens', moiNote:'Moi · note', ratt:"Elle s'est rattrapée ?"};
   const feelKey = side => side === 'elle' ? 'elleFeel' : 'feel';
   const feelNotesKey = side => side === 'elle' ? 'elleFeelNotes' : 'feelNotes';
   const photoKey = side => side === 'elle' ? 'ellePhotos' : 'photos';
@@ -605,6 +624,16 @@ function openEntry(id, color, draft, startAt, prefill){
     const sel = e[side];
     return `<div class="chips">${withSelected(actTiles(e.color, side), Object.keys(sel)).map(t => `<button class="chip ${t in sel ? 'on' : ''}" data-side="${side}" data-tile="${esc(t)}" aria-pressed="${t in sel}">${esc(t)}${sel[t] ? ' ✎' : ''}</button>`).join('')}
       <button class="chip add" data-addact="${side}">+ Ma tuile</button></div>${preview('side', side, sel)}`;
+  }
+  function reactChips(){
+    const sel = e.react.tiles;
+    return `<div class="chips">${withSelected(reactTiles(e.react.c), Object.keys(sel)).map(t => `<button class="chip ${t in sel ? 'on' : ''}" data-react="moi" data-tile="${esc(t)}" aria-pressed="${t in sel}">${esc(t)}${sel[t] ? ' ✎' : ''}</button>`).join('')}
+      <button class="chip add" data-addreact="1">+ Ma tuile</button></div>${preview('react', 'moi', sel)}`;
+  }
+  function tapReact(t){
+    const s = e.react.tiles, wasOn = t in s;
+    if (!wasOn) { s[t] = ''; redraw(); }
+    bubble(t, s[t] || '', wasOn, (r, v) => { if (r === 'off') delete s[t]; else s[t] = v; redraw(); });
   }
   function feelChips(side){
     const sel = e[feelKey(side)], notes = e[feelNotesKey(side)];
@@ -650,6 +679,7 @@ function openEntry(id, color, draft, startAt, prefill){
   function stepHasContent(k){
     if (k === 'qui') return !!e.qui;
     if (k === 'ratt') return !!e.ratt.ok;
+    if (k === 'moiReact') return !!e.react.c;
     const side = k.startsWith('elle') ? 'elle' : 'moi';
     if (k.endsWith('Act')) return Object.keys(e[side]).length > 0 || (side === 'moi' && e.air);
     if (k.endsWith('Feel')) return e[feelKey(side)].length > 0;
@@ -671,6 +701,9 @@ function openEntry(id, color, draft, startAt, prefill){
       ${e.ratt.ok === 'non' ? `<small class="hint" style="margin-top:12px">Noté. Une page dédiée viendra plus tard.</small>` : ''}
       <small class="hint" style="margin-top:12px">Tu pourras aussi l'ajouter plus tard avec ↺ sur le moment, dans le Livre.</small>`;
     }
+    if (k === 'moiReact') return `<div class="sub" style="margin-top:14px">La couleur de ma réaction</div>
+      <div class="pastilles" style="margin-top:8px">${ORDER.map(c => `<button class="pbtn c-${c}" data-rcol="${c}" style="width:48px;height:48px;${e.react.c===c ? 'outline:3px solid var(--accent);outline-offset:3px' : ''}" aria-pressed="${e.react.c===c}" aria-label="Réaction ${COLORS[c].name.toLowerCase()}"></button>`).join('')}</div>
+      ${e.react.c ? `<div style="margin-top:16px">${reactChips()}</div>` : `<small class="hint">Ta réaction peut être d'une autre couleur que la sienne.</small>`}`;
     const side = k.startsWith('elle') ? 'elle' : 'moi';
     if (k.endsWith('Act')) return `
       ${needsSuggestion() ? `<div class="banner warn"><strong>${esc(GRAVE.find(g => g in e.elle || g in e.moi))}, c'est sérieux.</strong> Ce serait plutôt une pastille rouge ? C'est toi qui choisis.
@@ -727,6 +760,9 @@ function openEntry(id, color, draft, startAt, prefill){
     ov.querySelectorAll('[data-qui]').forEach(b => b.onclick = () => { syncText(); e.qui = b.dataset.qui; step = 1; draw(); });
     ov.querySelectorAll('[data-feel]').forEach(b => b.onclick = () => { syncText(); tapFeel(b.dataset.feel, b.dataset.tile); });
     ov.querySelectorAll('[data-side]').forEach(b => b.onclick = () => { syncText(); tapAct(b.dataset.side, b.dataset.tile); });
+    ov.querySelectorAll('[data-react]').forEach(b => b.onclick = () => { syncText(); tapReact(b.dataset.tile); });
+    ov.querySelectorAll('[data-rcol]').forEach(b => b.onclick = () => { syncText(); e.react.c = e.react.c === b.dataset.rcol ? '' : b.dataset.rcol; redraw(); });
+    ov.querySelectorAll('[data-addreact]').forEach(b => b.onclick = async () => { syncText(); const v = (prompt(`Nom de ta tuile (ma réaction, ${COLORS[e.react.c].name.toLowerCase()}) :`) || '').trim(); if (!v) return; await addMyTile(e.react.c, 'react', v); if (!(v in e.react.tiles)) tapReact(v); else redraw(); });
     ov.querySelectorAll('[data-addact]').forEach(b => b.onclick = async () => { syncText(); const v = (prompt(`Nom de ta tuile (${COLORS[e.color].name.toLowerCase()}, ce qui a été fait) :`) || '').trim(); if (!v) return; await addMyTile(e.color, 'acts', v); if (!(v in e[b.dataset.addact])) tapAct(b.dataset.addact, v); else redraw(); });
     ov.querySelectorAll('[data-addfeel]').forEach(b => b.onclick = async () => { syncText(); const v = (prompt(`Nom de ta tuile (${COLORS[e.color].name.toLowerCase()}, ressenti) :`) || '').trim(); if (!v) return; await addMyTile(e.color, 'feel', v); if (!e[feelKey(b.dataset.addfeel)].includes(v)) tapFeel(b.dataset.addfeel, v); else redraw(); });
     const dv = ov.querySelector('#devant'); if (dv) dv.onclick = () => { syncText(); e.devant = !e.devant; redraw(); };
@@ -750,6 +786,8 @@ function openEntry(id, color, draft, startAt, prefill){
       syncText();
       Object.keys(e.elle).forEach(k => e.elle[k] = (e.elle[k]||'').trim());
       Object.keys(e.moi).forEach(k => e.moi[k] = (e.moi[k]||'').trim());
+      if (!steps().includes('moiReact') || !e.react.c) e.react = {c:'', tiles:{}};
+      Object.keys(e.react.tiles).forEach(k => e.react.tiles[k] = (e.react.tiles[k]||'').trim());
       e.what = e.what.trim(); e.need = e.need.trim(); e.elleNote = e.elleNote.trim();
       Object.values(e.ratt.tiles).forEach(r => r.how = (r.how || '').trim());
       if (e.ratt.ok !== 'oui') e.ratt.tiles = {};
@@ -849,6 +887,8 @@ function renderStats(m){
     const qui = {elle:0, moi:0, deux:0}; list.forEach(e => { if (e.qui) qui[e.qui]++; });
     const rep = {oui:0, partie:0, non:0}; list.filter(e => e.repair).forEach(e => rep[e.repair]++);
     const air = list.filter(e => e.air).length;
+    const pairs = {}; const reactT = {};
+    list.forEach(e => { if (!e.react || !e.react.c) return; const k = e.color + e.react.c; pairs[k] = (pairs[k]||0) + 1; Object.keys(e.react.tiles||{}).forEach(t => reactT[t] = (reactT[t]||0) + 1); });
     const devant = list.filter(e => e.devant).length;
     const rt = {oui:0, non:0, w:0, g:0, o:0}; list.forEach(e => { if (!e.ratt || !e.ratt.ok) return; rt[e.ratt.ok]++; Object.values(e.ratt.tiles||{}).forEach(r => rt[r.lvl]++); });
     const maxCav = Math.max(1, ...CAVALIERS.map(k => (elle[k]||0) + (moi[k]||0)));
@@ -871,8 +911,9 @@ function renderStats(m){
     </div>
     <div class="card"><div class="sub">Elle s'est rattrapée ?</div><div style="font-size:14px;margin-top:6px;line-height:1.7">Oui ${rt.oui} · Non ${rt.non}<br>
       ${['w','g','o'].map(c => `<span class="row" style="display:inline-flex;gap:4px;margin-right:10px"><span class="dot c-${c}" style="width:10px;height:10px"></span>${RATT[c]} ${rt[c]}</span>`).join('')}</div></div>
+    <div class="card"><div class="sub">Ma réaction face à elle</div>${Object.keys(pairs).length ? `<div style="font-size:14px;margin-top:8px;line-height:2">${Object.entries(pairs).sort((a,b) => b[1]-a[1]).map(([k,v]) => `<div class="row" style="gap:6px">Elle <span class="dot c-${k[0]}" style="width:12px;height:12px"></span> → moi <span class="dot c-${k[1]}" style="width:12px;height:12px"></span> : ${v} fois</div>`).join('')}</div>` : '<div class="empty" style="font-size:13px;margin-top:6px">Rien encore</div>'}</div>
     <div class="card"><div class="sub" style="margin-bottom:6px">Toutes les tuiles du mois</div>
-      ${allTiles("Ce qu'elle a fait", elle)}${Object.keys(feelCounts(list, 'elleFeel')).length ? allTiles('Comment elle se sent (avant v1.6)', feelCounts(list, 'elleFeel')) : ''}${allTiles("Ce que j'ai fait", moi)}${allTiles('Comment je me sens', feelCounts(list, 'feel'))}
+      ${allTiles("Ce qu'elle a fait", elle)}${Object.keys(feelCounts(list, 'elleFeel')).length ? allTiles('Comment elle se sent (avant v1.6)', feelCounts(list, 'elleFeel')) : ''}${allTiles("Ce que j'ai fait", moi)}${allTiles('Ma réaction', reactT)}${allTiles('Comment je me sens', feelCounts(list, 'feel'))}
       <small class="hint">« J'ai pris l'air » : ${air} fois</small></div>`;
     function allTiles(title, m2){ const o = topN(m2, 999); const mx = Math.max(1, ...o.map(x => x[1])); return `<div style="font-size:14px;font-weight:600;margin:12px 0 6px">${title}</div>${o.length ? `<div class="bars">${o.map(([k,v]) => `<span>${esc(k)}</span><div class="bar"><i style="width:${v/mx*100}%;background:${tileColor(k)}"></i></div><span>${v}</span>`).join('')}</div>` : '<span class="empty" style="font-size:13px">Rien encore</span>'}`; }
     function topList(title, m2){ const o = topN(Object.fromEntries(Object.entries(m2).filter(([k]) => !CAVALIERS.includes(k))), 4); return o.length ? `<div style="font-size:13px;margin-top:10px"><span class="sub">${title} : </span>${o.map(([k,v]) => esc(k) + ' ' + v).join(' · ')}</div>` : ''; }
@@ -963,6 +1004,7 @@ function renderBilans(m){
     <div style="font-weight:700">${esc(p.label)}${i===0 ? ' <span class="sub" style="font-weight:400">· en cours</span>' : ''}</div>
     <div class="row" style="gap:6px;margin:8px 0">${ORDER.map(c => { const n = counts(inRange(entries(), p.from, p.to))[c]; return n ? `<span class="row" style="gap:4px;font-size:13px"><span class="dot c-${c}" style="width:10px;height:10px"></span>${n}</span>` : ''; }).join('')}</div>
     <div class="bilan-text">${esc(summaryText(p.from, p.to, S.bilanSeg))}</div>
+    ${jvInRange(p.from, p.to).length ? `<div class="sub" style="margin-top:8px">Je vais : ${['elle','moi'].map(w => { const l = jvInRange(p.from, p.to).filter(j => j.who === w); return `${w === 'elle' ? 'Elle' : 'Moi'} ${l.filter(j => j.status === 'done').length} fait(s), ${l.filter(j => j.status === 'drop').length} en l'air`; }).join(' · ')}</div>` : ''}
     <button class="btn block" data-export="${p.from}|${p.to}|${esc(p.label)}" style="margin-top:12px">Exporter ce bilan pour Claude</button>
   </div>`).join('')}
   <small class="hint" style="margin-top:12px">Le fichier exporté contient le détail de la période (moments, tuiles, annotations, notes). Envoie-le dans la conversation avec Claude pour en parler.</small>`;
@@ -993,6 +1035,7 @@ function periodText(from, to, label){
         const fmtFeel = (a, n) => a.map(k => (n||{})[k] ? `${k} (${n[k]})` : k).join(', ');
         if (i.elleFeel && i.elleFeel.length) L.push(`  - Elle se sent : ${fmtFeel(i.elleFeel, i.elleFeelNotes)}`);
         if (i.elleNote) L.push(`  - Note sur elle : ${i.elleNote}`);
+        if (i.react && i.react.c) L.push(`  - Ma réaction : ${sym[i.react.c]} ${COLORS[i.react.c].name}${Object.keys(i.react.tiles||{}).length ? ' — ' + fmt(i.react.tiles) : ''}`);
         if (Object.keys(i.moi||{}).length) L.push(`  - J'ai fait : ${fmt(i.moi)}`);
         if (i.feel && i.feel.length) L.push(`  - Je me sens : ${fmtFeel(i.feel, i.feelNotes)}`);
         if (i.what) L.push(`  - Ma note : ${i.what}`);
@@ -1006,6 +1049,11 @@ function periodText(from, to, label){
       });
     }
     d = addDays(d, 1);
+  }
+  const jl = jvInRange(from, to);
+  if (jl.length) {
+    L.push(''); L.push('## Je vais (ce qui a été annoncé)');
+    jl.forEach(j => L.push(`- ${j.who === 'elle' ? 'Elle' : 'Moi'} · ${IMP[j.imp]} · ${j.text} — ${jvState(j)}`));
   }
   return L.join('\n');
 }
@@ -1022,6 +1070,114 @@ function exportPeriod(from, to, label){
     ? `Umoral_bilan_${MOIS[parseYmd(from).getMonth()]}-${parseYmd(from).getFullYear()}.txt`
     : `Umoral_bilan_semaine${isoWeek(from)}_${from}_au_${to}.txt`;
   shareOrDownload(new Blob([txt], {type:'text/plain'}), name);
+}
+
+/* ---------- JE VAIS ---------- */
+// type 'j' : {who:'elle'|'moi', text, imp:'n'|'o'|'r', due, created, status:'open'|'done'|'drop', reports, doneOn, dropOn}
+const jvAll = () => S.items.filter(i => i.type === 'j');
+const jvWho = j => j.who === 'elle' ? 'Elle' : 'Moi';
+const dayLabel = d => d === todayStr() ? "Aujourd'hui" : d === addDays(todayStr(), 1) ? 'Demain' : shortDate(d);
+const jvState = j => j.status === 'done' ? `fait le ${shortDate(j.doneOn)}${j.reports ? ' (reporté ' + j.reports + ' fois avant)' : ''}`
+  : j.status === 'drop' ? `parole en l'air (laissé tomber le ${shortDate(j.dropOn)}${j.reports ? ', reporté ' + j.reports + ' fois' : ''})`
+  : `en cours, prévu ${dayLabel(j.due).toLowerCase()}${j.reports ? ', reporté ' + j.reports + ' fois' : ''}`;
+const jvInRange = (from, to) => jvAll().filter(j => (j.created >= from && j.created <= to) || (j.doneOn && j.doneOn >= from && j.doneOn <= to) || (j.dropOn && j.dropOn >= from && j.dropOn <= to));
+// à demander : en retard, ou prévu aujourd'hui une fois l'heure du soir passée
+const jvDue = () => { const t = todayStr(), late = nowTime() >= (S.settings.reminder || '21:00'); return jvAll().filter(j => j.status === 'open' && (j.due < t || (j.due === t && late))); };
+async function jvAnswer(j, a){
+  const t = todayStr();
+  if (a === 'oui') { j.status = 'done'; j.doneOn = t; }
+  else if (a === 'non') { j.reports = (j.reports || 0) + 1; j.due = addDays(t, 1); }
+  else if (a === 'drop') { j.status = 'drop'; j.dropOn = t; }
+  else if (a === 'open') { j.status = 'open'; j.doneOn = null; j.dropOn = null; if (j.due < t) j.due = t; }
+  await saveItem(j);
+}
+function checkJeVais(force){
+  if (!S.unlocked || document.querySelector('.overlay') || (S.jvSnooze && !force)) return;
+  const list = jvDue(); if (!list.length) return;
+  openJCheck();
+}
+function openJCheck(){
+  const ov = sheet(`<div style="font-size:18px;font-weight:700">Je vais · le point du soir</div>`, '<div id="jcl"></div>',
+    `<button class="btn block" id="jlater">Plus tard</button>`);
+  const draw = () => {
+    const list = jvDue().sort((a,b) => IMP_RANK[a.imp] - IMP_RANK[b.imp]);
+    if (!list.length) { ov.remove(); toast('Tout est à jour'); render(); return; }
+    ov.querySelector('#jcl').innerHTML = list.map(j => `<div class="side">
+      <div class="row" style="gap:8px"><span class="dot c-${j.imp}"></span><span class="sub">${jvWho(j)} a dit · ${esc(dayLabel(j.due))}${j.reports ? ' · reporté ' + j.reports + '×' : ''}</span></div>
+      <div style="font-size:17px;font-weight:600;margin:6px 0 10px">${esc(j.text)}</div>
+      <div class="sub" style="margin-bottom:8px">${j.who === 'elle' ? "Est-ce qu'elle l'a fait ?" : "Est-ce que tu l'as fait ?"}</div>
+      <div class="three"><button data-ja="oui" data-jid="${j.id}">Oui</button><button data-ja="non" data-jid="${j.id}">Non, demain</button><button data-ja="drop" data-jid="${j.id}">Laisser tomber</button></div></div>`).join('');
+    ov.querySelectorAll('[data-ja]').forEach(b => b.onclick = async () => { const j = S.items.find(x => x.id === b.dataset.jid); await jvAnswer(j, b.dataset.ja); draw(); });
+  };
+  ov.querySelector('#jlater').onclick = () => { S.jvSnooze = true; ov.remove(); render(); };
+  draw();
+}
+function openJItem(id){
+  const j = S.items.find(x => x.id === id); if (!j) return;
+  const open = j.status === 'open';
+  const ov = sheet(`<div class="row" style="gap:8px"><span class="dot c-${j.imp}"></span><span style="font-weight:700">${jvWho(j)} · ${esc(IMP[j.imp])}</span></div><div class="sub">${esc(jvState(j))}</div>`,
+    `<textarea id="jet" rows="3" style="margin-top:12px">${esc(j.text)}</textarea>
+     ${open ? `<div class="three" style="margin-top:12px"><button data-jx="oui">Fait ✓</button><button data-jx="non">Reporter à demain</button><button data-jx="drop">Laisser tomber</button></div>`
+            : `<button class="btn block" data-jx="open" style="margin-top:12px">Remettre en cours</button>`}`,
+    `<button class="btn danger" id="jdel">Supprimer</button><button class="btn primary" id="jok" style="flex:1">OK</button>`,
+    () => ov.querySelector('#jet').value.trim() !== j.text);
+  const keepText = () => { const v = ov.querySelector('#jet').value.trim(); if (v) j.text = v; };
+  ov.querySelector('#jok').onclick = async () => { keepText(); await saveItem(j); ov.remove(); render(); };
+  ov.querySelectorAll('[data-jx]').forEach(b => b.onclick = async () => { keepText(); await jvAnswer(j, b.dataset.jx); ov.remove(); toast(b.dataset.jx === 'drop' ? "Rangé dans « Paroles en l'air »" : 'Noté'); render(); });
+  ov.querySelector('#jdel').onclick = async () => { if (confirm('Supprimer ce « je vais » ? Ce sera définitif.')) { await deleteItem(j.id); ov.remove(); render(); } };
+}
+function renderJeVais(m){
+  const t = todayStr();
+  const F = S.jvForm = S.jvForm || {who:'elle', imp:'', day:'demain', date:addDays(t, 2), text:''};
+  const flt = S.jvFilter || 'tous';
+  const all = jvAll().filter(j => flt === 'tous' || j.who === flt);
+  const open = all.filter(j => j.status === 'open').sort((a,b) => a.due.localeCompare(b.due) || IMP_RANK[a.imp] - IMP_RANK[b.imp]);
+  const done = all.filter(j => j.status === 'done').sort((a,b) => (b.doneOn||'').localeCompare(a.doneOn||''));
+  const drop = all.filter(j => j.status === 'drop').sort((a,b) => (b.dropOn||'').localeCompare(a.dropOn||''));
+  const due = jvDue();
+  const line = j => `<button class="item" data-jitem="${j.id}"><span class="dot c-${j.imp}" style="margin-top:3px"></span>
+    <span style="flex:1;min-width:0"><span class="between meta"><span>${jvWho(j)} · ${j.status === 'open' ? esc(dayLabel(j.due)) + (j.due < t ? ' · en retard' : '') : j.status === 'done' ? 'fait le ' + esc(shortDate(j.doneOn)) : 'laissé tomber le ' + esc(shortDate(j.dropOn))}</span><span>${j.reports ? 'reporté ' + j.reports + '×' : ''}</span></span>
+    <span class="txt ${j.status === 'done' ? 'jdone' : ''}" style="display:block">${esc(j.text)}</span></span></button>`;
+  const st = w => { const l = jvAll().filter(j => j.who === w); const d = l.filter(j => j.status === 'done').length, x = l.filter(j => j.status === 'drop').length;
+    return `<div class="card" style="margin-top:0"><div class="sub">${w === 'elle' ? 'Elle' : 'Moi'}</div><div class="stat">${d + x ? Math.round(d/(d+x)*100) + ' %' : '—'}</div><small class="hint" style="margin-top:2px">tenu</small>
+      <div style="font-size:13px;margin-top:6px;line-height:1.7">Faits ${d}<br>En cours ${l.filter(j => j.status === 'open').length}<br>Reports ${l.reduce((a,j) => a + (j.reports||0), 0)}<br>En l'air ${x}</div></div>`; };
+  const pick = on => on ? 'border-color:var(--accent);background:var(--accent-bg);font-weight:700' : '';
+  m.innerHTML = `<h1>Je vais</h1>
+  ${due.length ? `<button class="btn primary block" id="jcheck" style="height:52px;margin-top:4px">Faire le point (${due.length})</button>` : ''}
+  <section class="card" aria-label="Noter un je vais">
+    <div class="sub">Noter un « je vais »</div>
+    <div class="three" style="grid-template-columns:1fr 1fr;margin-top:10px">${['elle','moi'].map(w => `<button data-jwho="${w}" style="height:48px;font-size:16px;${pick(F.who === w)}" aria-pressed="${F.who === w}">${w === 'elle' ? 'Elle' : 'Moi'}</button>`).join('')}</div>
+    <input type="text" id="jtext" value="${esc(F.text)}" placeholder="Ex. appeler le dentiste" style="margin-top:10px">
+    <div class="q">Importance</div>
+    <div class="row" style="gap:18px">${['n','o','r'].map(c => `<button class="rattpick" data-jimp="${c}" aria-pressed="${F.imp === c}"><span class="dot c-${c}" style="width:30px;height:30px;border-radius:15px;${F.imp === c ? 'outline:3px solid var(--accent);outline-offset:2px' : ''}"></span><span>${IMP[c]}</span></button>`).join('')}</div>
+    <div class="q">Pour quand ?</div>
+    <div class="three">${[['auj',"Aujourd'hui"],['demain','Demain'],['autre','Autre date']].map(([k,l]) => `<button data-jday="${k}" style="${pick(F.day === k)}" aria-pressed="${F.day === k}">${l}</button>`).join('')}</div>
+    ${F.day === 'autre' ? `<input type="date" id="jdate" value="${esc(F.date)}" min="${t}" style="margin-top:10px">` : ''}
+    <button class="btn primary block" id="jadd" style="margin-top:14px">Noter</button>
+  </section>
+  <div class="chips" style="margin-top:14px" aria-label="Filtrer">${[['tous','Tous'],['elle','Elle'],['moi','Moi']].map(([k,l]) => `<button class="chip ${flt === k ? 'on' : ''}" data-jf="${k}" aria-pressed="${flt === k}">${l}</button>`).join('')}</div>
+  <section class="card" aria-label="En cours"><div class="sub">En cours${open.length ? ' (' + open.length + ')' : ''}</div>${open.length ? open.map(line).join('') : '<div class="empty" style="padding:10px 0">Rien en cours.</div>'}</section>
+  <section class="card" aria-label="Historique"><div class="sub">Historique · faits${done.length ? ' (' + done.length + ')' : ''}</div>${done.length ? done.map(line).join('') : '<div class="empty" style="padding:10px 0">Rien encore.</div>'}</section>
+  <section class="card" aria-label="Paroles en l'air"><div class="sub">Paroles en l'air${drop.length ? ' (' + drop.length + ')' : ''}</div>${drop.length ? drop.map(line).join('') : '<div class="empty" style="padding:10px 0">Rien encore.</div>'}</section>
+  <div class="sub" style="margin:16px 0 8px">Stats Je vais</div>
+  <div class="grid2">${st('elle')}${st('moi')}</div>
+  <small class="hint" style="margin:10px 0 14px">Le soir à partir de ${esc(S.settings.reminder || '21:00')}, l'appli te demande si c'est fait. « Non » reporte au lendemain.</small>`;
+  const txt = () => { const i = $('#jtext'); if (i) F.text = i.value; const d = $('#jdate'); if (d && d.value) F.date = d.value; };
+  m.querySelectorAll('[data-jwho]').forEach(b => b.onclick = () => { txt(); F.who = b.dataset.jwho; render(); });
+  m.querySelectorAll('[data-jimp]').forEach(b => b.onclick = () => { txt(); F.imp = b.dataset.jimp; render(); });
+  m.querySelectorAll('[data-jday]').forEach(b => b.onclick = () => { txt(); F.day = b.dataset.jday; render(); });
+  m.querySelectorAll('[data-jf]').forEach(b => b.onclick = () => { txt(); S.jvFilter = b.dataset.jf; render(); });
+  m.querySelectorAll('[data-jitem]').forEach(b => b.onclick = () => { txt(); openJItem(b.dataset.jitem); });
+  if ($('#jcheck')) $('#jcheck').onclick = () => { txt(); openJCheck(); };
+  $('#jadd').onclick = async () => {
+    txt(); const v = F.text.trim();
+    if (!v) return toast('Écris ce qui a été dit');
+    if (!F.imp) return toast("Choisis l'importance");
+    const d = F.day === 'auj' ? t : F.day === 'demain' ? addDays(t, 1) : (F.date || addDays(t, 1));
+    await saveItem({id:uid(), type:'j', who:F.who, text:v, imp:F.imp, due:d, created:t, ts:Date.now(), status:'open', reports:0, doneOn:null, dropOn:null});
+    S.jvForm = {who:F.who, imp:'', day:'demain', date:addDays(t, 2), text:''};
+    toast('Noté pour ' + dayLabel(d).toLowerCase()); render();
+  };
 }
 
 /* ---------- RÉGLAGES ---------- */
@@ -1043,7 +1199,7 @@ function renderReglages(m){
     <input type="time" id="rem" value="${esc(S.settings.reminder)}">
     <small class="hint">Une appli web sur iPhone ne peut pas envoyer de rappel toute seule. Pour l'avoir : app Raccourcis › Automatisation › Heure de la journée (${esc(S.settings.reminder)}, tous les jours) › action « Ouvrir l'URL » avec l'adresse d'Umoral, ou « Afficher une notification ». Désactive « Demander avant d'exécuter ».</small></div>
   <div class="card"><div style="font-weight:700">Mes tuiles</div>
-    ${ORDER.map(c => { const m = (S.settings.tiles||{})[c] || {}; const all = [...(m.acts||[]).map(t => ['acts',t]), ...(m.feel||[]).map(t => ['feel',t])]; return `<div class="row" style="margin:12px 0 6px;gap:8px"><span class="dot c-${c}"></span><span class="sub">${COLORS[c].name}</span></div>
+    ${ORDER.map(c => { const m = (S.settings.tiles||{})[c] || {}; const all = [...(m.acts||[]).map(t => ['acts',t]), ...(m.feel||[]).map(t => ['feel',t]), ...(m.react||[]).map(t => ['react',t])]; return `<div class="row" style="margin:12px 0 6px;gap:8px"><span class="dot c-${c}"></span><span class="sub">${COLORS[c].name}</span></div>
       <div class="chips">${all.map(([k,t]) => `<button class="chip" data-rmtile="${c}|${k}|${esc(t)}" aria-label="Retirer ${esc(t)}">${esc(t)} ×</button>`).join('') || '<span class="empty">Aucune</span>'}</div>`; }).join('')}
     ${(S.settings.feel.length || S.settings.acts.length) ? `<div class="sub" style="margin:12px 0 6px">Ajoutées avant (toutes couleurs) :</div>
       <div class="chips">${S.settings.feel.map((t,i) => `<button class="chip" data-rmfeel="${i}" aria-label="Retirer ${esc(t)}">${esc(t)} ×</button>`).join('')}${S.settings.acts.map((t,i) => `<button class="chip" data-rmact="${i}" aria-label="Retirer ${esc(t)}">${esc(t)} ×</button>`).join('')}</div>` : ''}
@@ -1107,7 +1263,7 @@ async function restoreAll(file){
   render();
   // nouvelle page automatique : si l'appli reste ouverte après minuit, on passe au jour suivant
   let last = todayStr();
-  setInterval(() => { const t = todayStr(); if (t !== last) { if (S.day === last) S.day = t; last = t; if (S.unlocked && S.tab === 'livre' && !document.querySelector('.overlay')) render(); } }, 60000);
+  setInterval(() => { const t = todayStr(); if (t !== last) { if (S.day === last) S.day = t; last = t; if (S.unlocked && S.tab === 'livre' && !document.querySelector('.overlay')) render(); } checkJeVais(); }, 60000);
   // reverrouille après 2 minutes en arrière-plan
   let hiddenAt = 0;
   document.addEventListener('visibilitychange', () => {

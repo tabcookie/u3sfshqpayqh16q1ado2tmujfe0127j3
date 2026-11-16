@@ -1,5 +1,14 @@
 # Journal des versions
 
+## v1.10 — 16 nov. 2026
+- Nouvel onglet « Je vais » (entre Stats et Bilans) : Elle / Moi, texte, importance obligatoire (gris neutre, orange important, rouge urgent), jour (Aujourd'hui, Demain par défaut, Autre date).
+- Le soir à partir de l'heure du rappel (21h00 par défaut), à l'ouverture : « Est-ce qu'elle l'a fait ? » Oui / Non (reporté au lendemain) / Laisser tomber. Bouton « Faire le point » aussi dans l'onglet.
+- En touchant un « je vais » : Fait, Reporter, Laisser tomber, Supprimer, modifier le texte.
+- Historique des faits (barrés), zone « Paroles en l'air », filtre Elle / Moi, stats à part (tenu %, faits, en cours, reports, en l'air) ; présent dans les bilans et l'export.
+- Pastille avec « Qui ? Elle » : l'écran « Ma réaction » remplace « Ce que j'ai fait » : on choisit la couleur de sa réaction puis ses tuiles (commentaire par tuile, « + Ma tuile »). « Les deux » garde « Ce que j'ai fait ».
+- Stats : « Ma réaction face à elle » (Elle 🔴 → moi 🟢 : n fois) et tuiles de réaction comptées ; export bilan inclut la réaction.
+- Chiffres du code plus grands.
+
 ## v1.9 — 16 nov. 2026
 - Bouton « Supprimer des moments » sous le cadre Moments : on coche les moments à effacer, « Supprimer (n) » ou « Annuler », avec confirmation (définitif).
 

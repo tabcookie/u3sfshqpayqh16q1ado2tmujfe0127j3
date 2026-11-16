@@ -14,6 +14,7 @@ Journal personnel pour noter les moments d'une relation et y voir clair. Soutien
 - La noire n'écrase pas les autres couleurs de la journée.
 - Un clic ouvre toujours l'écran de la pastille, il faut « Valider » (on peut valider vide et compléter plus tard).
 - Page de la pastille (plein écran), un écran par choix : « Qui ? » (Elle / Moi / Les deux) → partie de la personne choisie (« Les deux » : Elle d'abord), puis l'autre. Elle : ce qu'elle a fait (tuiles) → note (texte, photos). Pas d'écran « comment elle se sent » : on ne peut pas savoir à sa place. Moi : ce que j'ai fait (tuiles ; « J'ai pris l'air » en orange seulement) → comment je me sens (tuiles) → note (texte, « De quoi j'aurais eu besoin ? », photos). Sur chaque écran : choisir, ou « Passer ». Barre d'étapes en haut pour sauter d'un écran à l'autre. Valider au dernier écran (avec couleur, réparation, suppression pour un moment déjà enregistré).
+- « Qui ? Elle » : côté Moi, l'écran « Ma réaction » remplace « Ce que j'ai fait » : couleur de la réaction (⚪🟢🟠🔴⚫, indépendante de la pastille) puis tuiles de cette couleur (bulle commentaire, « + Ma tuile »), puis « Comment je me sens », puis note et photos à la fin. « Les deux » garde « Ce que j'ai fait ». Stats : « Elle 🔴 → moi 🟢 : n fois ».
 - Dernier écran sur 🟠🔴⚫ : « Elle s'est rattrapée ? » Oui / Non. Oui → pour chaque tuile côté Elle : ⚪ totalement · 🟢 le gros · 🟠 un peu, + texte « Comment ? ». Non → page dédiée à définir plus tard. Bouton ↺ sur chaque moment du Livre pour l'ajouter après coup.
 - Case « Devant [prénom] » sur 🟠🔴⚫ (écran Qui ?), prénom réglé dans Réglages et stocké sur le téléphone seulement ; comptée dans les stats et les bilans.
 - Tuiles d'accusation : 🟠 Mauvaise interprétation · 🔴 Accusation · ⚫ Accusation grave.
@@ -33,6 +34,12 @@ Une page par jour, datée, qui change toute seule. Pastilles en haut, liste des 
 - Sous le cadre Moments : bouton « Supprimer des moments » → case à cocher devant chaque moment → « Supprimer (n) » / « Annuler » → confirmation « C'est définitif ».
 
 - ⚡ Note rapide en haut du Livre : on écrit sur le coup (heure auto), elle va dans « À trier » (tous jours confondus). En la touchant : choisir une couleur → la pastille s'ouvre avec le texte dans « Note sur elle », à la même date et heure ; une fois validée, la note disparaît de « À trier ». On peut aussi la garder ou la supprimer.
+
+## Je vais
+Onglet entre Stats et Bilans. Noter ce qui est annoncé : Elle / Moi, texte, importance obligatoire (gris neutre · 🟠 important · 🔴 urgent), jour (Aujourd'hui · Demain par défaut · Autre date).
+- À l'ouverture, à partir de l'heure du rappel du soir (et pour tout ce qui est en retard) : « Est-ce qu'elle l'a fait ? / Est-ce que tu l'as fait ? » Oui (fait, barré, dans l'historique) · Non (reporté au lendemain, compteur de reports) · Laisser tomber (zone « Paroles en l'air »). « Plus tard » remet à la prochaine ouverture.
+- Laisser tomber aussi en touchant l'élément, à tout moment.
+- Historique, Paroles en l'air, filtre Elle / Moi, stats propres (indépendantes des pastilles) ; présent dans les bilans et l'export.
 
 ## Noires
 Liste de toutes les noires (date, texte, étiquettes, réparation).

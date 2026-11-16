@@ -27,6 +27,7 @@ with sync_playwright() as p:
     pg.goto(app.as_uri())
 
     # 1. création du code
+    check(pg.locator('.pad button[data-k="5"]').bounding_box()['width'] >= 88, 'chiffres du code trop petits')
     for k in '12341234':
         pg.click(f'.pad button[data-k="{k}"]'); pg.wait_for_timeout(150)
     pg.wait_for_selector('[data-new="k"]')
@@ -60,7 +61,9 @@ with sync_playwright() as p:
     pg.fill('#enote', 'Note sur elle test')
     nxt()                                                                # Moi a fait
     check(pg.inner_text('.steptitle').startswith('Moi'), 'après Elle, on doit passer à Moi')
-    check(pg.locator('.chip[data-side="moi"][data-tile="Éloignement urgent"]').count() == 1, '« Éloignement urgent » absent côté Moi')
+    check(pg.inner_text('.steptitle') == 'Moi · ma réaction', 'Qui ? Elle : écran « ma réaction » attendu')
+    pg.click('[data-rcol="k"]'); pg.wait_for_timeout(100)
+    check(pg.locator('.chip[data-react][data-tile="Éloignement urgent"]').count() == 1, '« Éloignement urgent » absent de ma réaction noire')
     check(pg.locator('#air').count() == 0, '« J\'ai pris l\'air » ne doit pas être en noire')
     nxt()                                                                # Moi se sent
     check(pg.locator('.chip[data-feel="moi"][data-tile="Stress énorme"]').count() == 1, 'ressentis noirs absents')
@@ -173,6 +176,41 @@ with sync_playwright() as p:
     # 5. note
     pg.fill('#newnote', 'Note de test'); pg.click('#addnote'); pg.wait_for_timeout(200)
     check(pg.locator('[data-note]').count() == 1, 'note non ajoutée')
+
+    # 4g. ma réaction (Qui ? Elle) : sa propre couleur et ses tuiles
+    pg.click('[data-new="r"]'); pg.click('[data-qui="elle"]'); pg.wait_for_timeout(100)
+    pg.click('[data-goto="3"]')
+    check(pg.inner_text('.steptitle') == 'Moi · ma réaction', 'écran « ma réaction » absent avec Qui ? Elle')
+    pg.click('[data-rcol="g"]'); pg.click('.chip[data-react][data-tile="Resté calme"]')
+    pg.fill('#bubbleText', 'calme test'); pg.click('#bubbleOk'); pg.wait_for_timeout(100)
+    check(pg.locator('.chip.on[data-react][data-tile="Resté calme"]').count() == 1, 'réaction : tuile non allumée')
+    pg.locator('[data-goto]').last.click(); pg.click('#eok'); pg.wait_for_timeout(300)
+    check('Ma réaction verte : Resté calme' in pg.inner_text('main'), 'réaction non affichée dans le Livre')
+    txt0 = pg.evaluate("periodText(todayStr(), todayStr(), 'test')")
+    check('Ma réaction : 🟢 Verte — Resté calme (calme test)' in txt0, 'réaction absente de l\'export')
+    pg.click('[data-new="r"]'); pg.click('[data-qui="deux"]'); pg.wait_for_timeout(100)
+    check("Moi · ce que j'ai fait" in pg.evaluate("[...document.querySelectorAll('[data-goto]')].map(b => b.getAttribute('aria-label')).join('|')"), '« Les deux » doit garder « ce que j\'ai fait »')
+    pg.click('[data-close]'); pg.wait_for_timeout(200)
+
+    # 4h. Je vais
+    pg.click('[data-tab="jevais"]'); pg.wait_for_timeout(200)
+    pg.fill('#jtext', 'dentiste'); pg.click('#jadd'); pg.wait_for_timeout(200)
+    check(pg.locator('[data-jitem]').count() == 0, 'je vais : enregistré sans importance')
+    pg.click('[data-jimp="o"]'); pg.click('[data-jday="auj"]'); pg.click('#jadd'); pg.wait_for_timeout(200)
+    check(pg.locator('[data-jitem]').count() == 1, 'je vais : non enregistré')
+    pg.fill('#jtext', 'mail travail'); pg.click('[data-jwho="moi"]'); pg.click('[data-jimp="r"]'); pg.click('[data-jday="auj"]'); pg.click('#jadd'); pg.wait_for_timeout(200)
+    pg.evaluate("S.settings.reminder = '00:00'; render(); checkJeVais(true)"); pg.wait_for_timeout(200)
+    check(pg.locator('[data-ja]').count() == 6, 'je vais : point du soir absent')
+    pg.locator('[data-ja="non"]').first.click(); pg.wait_for_timeout(200)
+    pg.locator('[data-ja="drop"]').first.click(); pg.wait_for_timeout(300)
+    check(pg.locator('[data-ja]').count() == 0, 'je vais : point du soir pas refermé')
+    jv = pg.evaluate("jvAll().map(j => j.text + ':' + j.status + ':' + j.reports + ':' + (j.due > todayStr()))")
+    check('mail travail:open:1:true' in jv and 'dentiste:drop:0:false' in jv, 'je vais : réponses mal enregistrées ' + str(jv))
+    check("Paroles en l'air (1)" in pg.inner_text('main'), 'je vais : paroles en l\'air absentes')
+    pg.locator('[data-jitem]').first.click(); pg.click('[data-jx="oui"]'); pg.wait_for_timeout(200)
+    check('Historique · faits (1)' in pg.inner_text('main'), 'je vais : fait non rangé dans l\'historique')
+    check('Je vais (ce qui a été annoncé)' in pg.evaluate("periodText(todayStr(), todayStr(), 'test')"), 'je vais absent de l\'export')
+    pg.click('[data-tab="livre"]'); pg.wait_for_timeout(200)
 
     # 6. onglets
     for tab in ['noires', 'stats', 'bilans']:

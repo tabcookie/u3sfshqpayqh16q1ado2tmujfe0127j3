@@ -144,6 +144,16 @@ with sync_playwright() as p:
     pg.click('[data-new="w"]'); pg.click('#wquick'); pg.wait_for_timeout(300)
     check(pg.locator('[data-entry]').count() == 6, 'blanche : « Valider direct » n\'enregistre pas')
 
+    # 4e. note rapide : notée sur le coup, rangée plus tard dans une pastille
+    pg.click('#quick'); pg.fill('#qtext', 'note rapide test'); pg.click('#qok'); pg.wait_for_timeout(300)
+    check(pg.locator('[data-tri]').count() == 1, 'note rapide absente de « À trier »')
+    pg.click('[data-tri]'); pg.click('[data-trito="r"]'); pg.wait_for_timeout(200)
+    pg.click('[data-qui="elle"]'); pg.wait_for_timeout(100); pg.click('[data-goto="2"]')
+    check(pg.input_value('#enote') == 'note rapide test', 'note rapide : texte non repris dans « Note sur elle »')
+    pg.locator('[data-goto]').last.click(); pg.click('#eok'); pg.wait_for_timeout(300)
+    check(pg.locator('[data-tri]').count() == 0, 'note rapide toujours « À trier » après rangement')
+    check(pg.locator('[data-entry]').count() == 7, 'note rapide : pastille non créée')
+
     # 5. note
     pg.fill('#newnote', 'Note de test'); pg.click('#addnote'); pg.wait_for_timeout(200)
     check(pg.locator('[data-note]').count() == 1, 'note non ajoutée')

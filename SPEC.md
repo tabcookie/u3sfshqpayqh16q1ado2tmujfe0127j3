@@ -30,6 +30,8 @@ Journal personnel pour noter les moments d'une relation et y voir clair. Soutien
 ## Livre
 Une page par jour, datée, qui change toute seule. Pastilles en haut, liste des moments, notes séparées avec l'heure automatique. Le lendemain d'une 🔴/⚫ : « Ça s'est réparé ? Oui / En partie / Non ».
 
+- ⚡ Note rapide en haut du Livre : on écrit sur le coup (heure auto), elle va dans « À trier » (tous jours confondus). En la touchant : choisir une couleur → la pastille s'ouvre avec le texte dans « Note sur elle », à la même date et heure ; une fois validée, la note disparaît de « À trier ». On peut aussi la garder ou la supprimer.
+
 ## Noires
 Liste de toutes les noires (date, texte, étiquettes, réparation).
 

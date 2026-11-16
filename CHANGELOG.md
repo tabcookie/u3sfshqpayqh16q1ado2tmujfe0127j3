@@ -1,5 +1,9 @@
 # Journal des versions
 
+## v1.8 — 16 nov. 2026
+- ⚡ Note rapide en haut du Livre : on note sur le coup, elle attend dans « À trier ».
+- En la touchant, on choisit une couleur : la pastille s'ouvre avec le texte déjà dans « Note sur elle », à la même heure ; une fois validée, la note quitte « À trier ».
+
 ## v1.7 — 16 nov. 2026
 - Nouvelles tuiles : « Mauvaise interprétation » (orange), « Accusation » (rouge), « Accusation grave » (noire).
 - Case à cocher « Devant [prénom] » sur orange, rouge et noire ; prénom à régler dans Réglages (reste sur le téléphone) ; comptée dans les stats et les bilans.

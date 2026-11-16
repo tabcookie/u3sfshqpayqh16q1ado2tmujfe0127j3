@@ -409,7 +409,8 @@ function renderLivre(m){
   const d = S.day;
   const list = byDay(d);
   const ents = list.filter(i => i.type === 'e');
-  const nts = list.filter(i => i.type === 'n');
+  const nts = list.filter(i => i.type === 'n' && !i.tri);
+  const aTrier = notes().filter(n => n.tri).sort((a,b) => (a.date+a.time).localeCompare(b.date+b.time));
   // réparations à demander : rouges/noires des 3 jours précédents sans réponse (seulement sur la page d'aujourd'hui)
   const toRepair = d === t ? entries().filter(e => (e.color === 'r' || e.color === 'k') && !e.repair && e.date < t && e.date >= addDays(t,-3)).sort((a,b) => (a.date+a.time).localeCompare(b.date+b.time)) : [];
   const alert = d === t ? careAlert() : '';
@@ -426,6 +427,9 @@ function renderLivre(m){
   </div>
   ${d !== t ? `<button class="btn block" id="gotoday" style="margin-top:10px">Revenir à aujourd'hui</button>` : ''}
   ${alert ? `<div class="banner"><strong>${esc(alert)}</strong></div>` : ''}
+  <button class="btn block" id="quick" style="margin-top:12px;height:52px;font-weight:700">⚡ Note rapide</button>
+  ${aTrier.length ? `<section class="card" aria-label="À trier"><div class="sub">À trier (${aTrier.length})</div>
+    ${aTrier.map(n => `<button class="item" data-tri="${n.id}"><span class="meta" style="min-width:64px">${esc(n.date === t ? n.time : shortDate(n.date) + ' ' + n.time)}</span><span class="txt" style="margin:0;flex:1">${esc(n.text)}</span></button>`).join('')}</section>` : ''}
   <section class="card" aria-label="Ajouter un moment">
     <div class="between" style="margin-bottom:10px"><span class="sub">Ajouter un moment</span><button class="iconbtn" id="settings" aria-label="Réglages" style="width:36px;height:36px;border:none;background:none">${ICON.gear}</button></div>
     <div class="pastilles">${ORDER.map(c => `<button class="pbtn c-${c}" data-new="${c}" aria-label="Pastille ${COLORS[c].name.toLowerCase()} : ${COLORS[c].label}"></button>`).join('')}</div>
@@ -455,6 +459,8 @@ function renderLivre(m){
   m.querySelectorAll('[data-ratt]').forEach(b => b.onclick = () => openEntry(b.dataset.ratt, null, null, 'ratt'));
   m.querySelectorAll('[data-repair]').forEach(b => b.onclick = async () => { const e = S.items.find(x => x.id === b.dataset.repair); e.repair = b.dataset.v; await saveItem(e); toast('Noté'); render(); });
   m.querySelectorAll('[data-note]').forEach(b => b.onclick = () => openNote(b.dataset.note));
+  $('#quick').onclick = openQuick;
+  m.querySelectorAll('[data-tri]').forEach(b => b.onclick = () => openTri(b.dataset.tri));
   $('#addnote').onclick = async () => {
     const v = $('#newnote').value.trim(); if (!v) return;
     await saveItem({id:uid(), type:'n', date:d, time: d === t ? nowTime() : '—', ts:Date.now(), text:v});
@@ -469,6 +475,38 @@ function renderLivre(m){
 }
 
 /* ---------- note editor ---------- */
+/* note rapide : on écrit sur le coup, on range plus tard dans une pastille */
+function openQuick(){
+  const ov = sheet(`<div style="font-weight:700">⚡ Note rapide</div><div class="sub">Note vite, tu rangeras plus tard.</div>`,
+    `<textarea id="qtext" rows="5" placeholder="Ce qui vient de se passer…" style="margin-top:12px"></textarea>`,
+    `<button class="btn" data-close>Annuler</button><button class="btn primary" id="qok" style="flex:1">OK</button>`,
+    () => !!ov.querySelector('#qtext').value.trim());
+  const ta = ov.querySelector('#qtext'); setTimeout(() => ta.focus(), 50);
+  ov.querySelector('#qok').onclick = async () => {
+    const v = ta.value.trim(); if (!v) return ov.remove();
+    await saveItem({id:uid(), type:'n', tri:true, date:todayStr(), time:nowTime(), ts:Date.now(), text:v});
+    ov.remove(); toast('Noté, à trier plus tard'); render();
+  };
+}
+function openTri(id){
+  const n = S.items.find(x => x.id === id); if (!n) return;
+  const ov = sheet(`<div style="font-weight:700">À trier · ${esc(shortDate(n.date))} ${esc(n.time)}</div>`,
+    `<textarea id="ttext" rows="5" style="margin-top:12px">${esc(n.text)}</textarea>
+     <div class="q">Ranger dans une pastille</div>
+     <div class="pastilles">${ORDER.map(c => `<button class="pbtn c-${c}" data-trito="${c}" aria-label="Ranger en ${COLORS[c].name.toLowerCase()}"></button>`).join('')}</div>
+     <small class="hint">La pastille s'ouvre avec ton texte dans « Note sur elle », à la même heure.</small>`,
+    `<button class="btn danger" id="tdel">Supprimer</button><button class="btn" id="tkeep" style="flex:1">Garder pour plus tard</button>`,
+    () => ov.querySelector('#ttext').value.trim() !== n.text);
+  const txt = () => ov.querySelector('#ttext').value.trim();
+  ov.querySelector('#tkeep').onclick = async () => { if (txt() && txt() !== n.text) { n.text = txt(); await saveItem(n); } ov.remove(); render(); };
+  ov.querySelector('#tdel').onclick = async () => { if (confirm('Supprimer cette note ?')) { await deleteItem(n.id); ov.remove(); render(); } };
+  ov.querySelectorAll('[data-trito]').forEach(b => b.onclick = async () => {
+    if (txt() !== n.text) { n.text = txt(); await saveItem(n); }
+    ov.remove(); S.day = n.date;
+    openEntry(null, b.dataset.trito, null, null, {date:n.date, time:n.time, elleNote:n.text, fromNote:n.id});
+  });
+}
+
 function openNote(id){
   const n = S.items.find(x => x.id === id);
   const ov = sheet(`<div class="between"><div style="font-size:18px;font-weight:700">Note · ${esc(n.time)}</div><button class="iconbtn" data-close aria-label="Fermer">${ICON.close}</button></div>`,
@@ -498,12 +536,14 @@ const TITLES = {w:'Journée parfaite', g:'Bon moment', o:'Moment tendu', r:'Mome
 async function saveDraft(d){ try { await DB.put('kv', {k:'draft', v:d}); } catch(_) {} }
 async function clearDraft(){ try { await DB.del('kv', 'draft'); } catch(_) {} }
 
-function openEntry(id, color, draft, startAt){
+function openEntry(id, color, draft, startAt, prefill){
   const isNew = draft ? draft.isNew : !id;
   const e = draft ? draft.e
     : isNew ? {id:uid(), type:'e', date:S.day, time: S.day === todayStr() ? nowTime() : '12:00', ts:Date.now(), color, qui:'', what:'', need:'', feel:[], feelNotes:{}, moi:{}, elle:{}, elleFeel:[], elleFeelNotes:{}, elleNote:'', ellePhotos:[], air:false, photos:[], repair:null}
             : JSON.parse(JSON.stringify(S.items.find(x => x.id === id)));
   // compatibilité avec les anciens moments
+  if (prefill && isNew) { e.date = prefill.date; e.time = prefill.time; e.elleNote = prefill.elleNote; }
+  const fromNote = draft ? draft.fromNote : (prefill && prefill.fromNote);
   e.moi = e.moi || {}; e.elle = e.elle || {}; e.feel = e.feel || []; e.photos = e.photos || [];
   e.elleFeel = e.elleFeel || []; e.elleNote = e.elleNote || ''; e.ellePhotos = e.ellePhotos || [];
   e.what = e.what || ''; e.need = e.need || ''; e.feelNotes = e.feelNotes || {}; e.elleFeelNotes = e.elleFeelNotes || {}; e.ratt = e.ratt || {ok:'', tiles:{}}; e.ratt.tiles = e.ratt.tiles || {};
@@ -521,7 +561,7 @@ function openEntry(id, color, draft, startAt){
 
   const isDirty = () => { syncText(); return JSON.stringify(e) !== original || newPhotos.length > 0 || removedPhotos.length > 0; };
   let draftTimer = null;
-  const persist = () => { clearTimeout(draftTimer); draftTimer = setTimeout(() => { if (document.body.contains(ov)) saveDraft({isNew, e, original, sug:suggestionDismissed, removed:removedPhotos, newPhotos:newPhotos.map(p => ({id:p.id, blob:p.blob, side:p.side})), step}); }, 300); };
+  const persist = () => { clearTimeout(draftTimer); draftTimer = setTimeout(() => { if (document.body.contains(ov)) saveDraft({isNew, e, original, sug:suggestionDismissed, removed:removedPhotos, newPhotos:newPhotos.map(p => ({id:p.id, blob:p.blob, side:p.side})), step, fromNote}); }, 300); };
   const close = async () => { clearTimeout(draftTimer); await clearDraft(); ov.remove(); };
   ov.tryClose = async () => { if (!isDirty() || confirm("Fermer sans enregistrer ? Ce que tu viens d'écrire sera perdu.")) await close(); };
 
@@ -696,6 +736,7 @@ function openEntry(id, color, draft, startAt){
       for (const p of newPhotos) { await DB.put('photos', {id:p.id, blob:p.blob}); e[photoKey(p.side)].push(p.id); }
       for (const p of removedPhotos) await DB.del('photos', p);
       await saveItem(e);
+      if (fromNote) await deleteItem(fromNote);   // la note rapide est rangée : on l'enlève de « À trier »
       await close(); toast('Moment enregistré'); render();
     };
     const del = ov.querySelector('#edel'); if (del) del.onclick = async () => { if (confirm('Supprimer ce moment ? Ce sera définitif.')) { await deleteItem(e.id); await close(); render(); } };
@@ -925,7 +966,7 @@ function periodText(from, to, label){
     if (items.length) {
       L.push(''); L.push(`### ${longDate(d)}`);
       items.forEach(i => {
-        if (i.type === 'n') { L.push(`- ${i.time} · Note : ${i.text}`); return; }
+        if (i.type === 'n') { L.push(`- ${i.time} · ${i.tri ? 'Note rapide (pas encore triée)' : 'Note'} : ${i.text}`); return; }
         L.push(`- ${i.time} ${sym[i.color]} ${COLORS[i.color].name}${i.qui ? ' · Qui : ' + QUI[i.qui] : ''}${i.devant ? ' · ' + devantLabel() : ''}`);
         const fmt = o => Object.entries(o||{}).map(([k,v]) => v ? `${k} (${v})` : k).join(', ');
         if (Object.keys(i.elle||{}).length) L.push(`  - Elle a fait : ${fmt(i.elle)}`);

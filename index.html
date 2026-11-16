@@ -64,6 +64,9 @@ textarea,input[type=text],input[type=time]{width:100%;background:var(--bg);borde
 /* sheet */
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:20;display:flex;align-items:flex-end;justify-content:center}
 .sheet{background:var(--surface);width:100%;max-width:520px;max-height:94%;border-radius:22px 22px 0 0;border-top:1px solid var(--border);display:flex;flex-direction:column}
+.overlay.page{align-items:stretch;background:var(--bg)}
+.sheet.full{max-height:none;height:100%;border-radius:0;border:none;padding-top:var(--safe-t)}
+.foldbtn{width:100%;display:flex;justify-content:space-between;align-items:center;background:none;border:none;color:var(--text);font-size:15px;font-weight:700;padding:4px 0;min-height:36px}
 .sheet .head{padding:10px 18px 8px;border-bottom:1px solid var(--border)}
 .sheet .grab{width:40px;height:5px;border-radius:3px;background:#44444D;margin:0 auto 10px}
 .sheet .body{overflow-y:auto;padding:4px 18px 16px;-webkit-overflow-scrolling:touch}
@@ -147,7 +150,8 @@ const JOURS = ['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'
 const MOIS = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
 const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
 const longDate = s => { const d = parseYmd(s); return `${cap(JOURS[d.getDay()])} ${d.getDate()} ${MOIS[d.getMonth()]}`; };
-const shortDate = s => { const d = parseYmd(s); return `${JOURS[d.getDay()].slice(0,3)}. ${d.getDate()} ${MOIS[d.getMonth()].slice(0,4)}.`; };
+const MOIS_C = ['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
+const shortDate = s => { const d = parseYmd(s); return `${JOURS[d.getDay()].slice(0,3)}. ${d.getDate()} ${MOIS_C[d.getMonth()]}`; };
 const mondayOf = s => { const d = parseYmd(s); const wd = (d.getDay()+6)%7; d.setDate(d.getDate()-wd); return ymd(d); };
 function isoWeek(s){ const d = parseYmd(s); d.setHours(0,0,0,0); d.setDate(d.getDate()+3-((d.getDay()+6)%7)); const w1 = new Date(d.getFullYear(),0,4); return 1+Math.round(((d-w1)/86400000-3+((w1.getDay()+6)%7))/7); }
 const fmtRatio = r => r === null ? '—' : (r === Infinity ? '∞' : r.toFixed(1).replace('.', ','));
@@ -305,15 +309,28 @@ async function pinKey(k){
     if (pinStage !== 'confirm') { pinFirst = pinBuf; pinBuf = ''; pinStage = 'confirm'; return setTimeout(renderPin, 150); }
     if (pinBuf !== pinFirst) { pinBuf = ''; pinStage = 'enter'; pinFirst = ''; return setTimeout(() => renderPin('Les deux codes ne sont pas pareils, recommence.'), 150); }
     S.settings.pin = await hashPin(pinBuf); await saveSettings();
-    S.unlocked = true; pinBuf = ''; return render();
+    S.unlocked = true; pinBuf = ''; return afterUnlock();
   }
-  if (await hashPin(pinBuf) === S.settings.pin) { S.unlocked = true; pinBuf = ''; S.day = todayStr(); render(); }
+  if (await hashPin(pinBuf) === S.settings.pin) { S.unlocked = true; pinBuf = ''; afterUnlock(); }
   else { pinBuf = ''; setTimeout(() => renderPin('Mauvais code'), 150); }
+}
+
+async function afterUnlock(){
+  try {
+    const nav = await DB.get('kv', 'nav');
+    if (nav && nav.v) { const n = nav.v; S.tab = n.tab || 'livre'; S.day = n.day && n.day <= todayStr() ? n.day : todayStr(); S.statsSeg = n.statsSeg || 'mois'; S.calMonth = n.calMonth || S.calMonth; S.bilanSeg = n.bilanSeg || 'semaine'; }
+  } catch(_) {}
+  render();
+  try {
+    const d = await DB.get('kv', 'draft');
+    if (d && d.v && d.v.e) { S.day = d.v.e.date; if (S.tab !== 'livre') { S.tab = 'livre'; render(); } openEntry(null, null, d.v); toast('Je t\'ai remis là où tu en étais'); }
+  } catch(_) {}
 }
 
 /* ---------- shell ---------- */
 function render(){
   if (!S.unlocked) return renderPin();
+  try { DB.put('kv', {k:'nav', v:{tab:S.tab, day:S.day, statsSeg:S.statsSeg, calMonth:S.calMonth, bilanSeg:S.bilanSeg}}); } catch(_) {}
   const tabs = [['livre','Livre',ICON.book],['noires','Noires',ICON.black],['stats','Stats',ICON.stats],['bilans','Bilans',ICON.bilan]];
   $('#app').innerHTML = `<main id="main"></main>
   <nav class="tabs" aria-label="Navigation">${tabs.map(([k,l,i]) => `<button data-tab="${k}" class="${S.tab===k?'on':''}" ${S.tab===k?'aria-current="page"':''}>${i}${l}</button>`).join('')}</nav>`;
@@ -426,70 +443,88 @@ function sheet(head, body, foot, isDirty){
   return ov;
 }
 
-/* ---------- ENTRY editor (pastille ouverte) ---------- */
-function openEntry(id, color){
-  const isNew = !id;
-  const src = isNew ? {id:uid(), type:'e', date:S.day, time: S.day === todayStr() ? nowTime() : '12:00', ts:Date.now(), color, qui:'', what:'', need:'', feel:[], moi:{}, elle:{}, air:false, photos:[], repair:null}
-                    : JSON.parse(JSON.stringify(S.items.find(x => x.id === id)));
-  const e = src;
+/* ---------- ENTRY editor (page de la pastille) ---------- */
+const TITLES = {w:'Journée parfaite', g:'Bon moment', o:'Moment tendu', r:'Moment difficile', k:'Ligne franchie'};
+const ELLE_HINT = "ce qu'elle a fait";
+
+async function saveDraft(d){ try { await DB.put('kv', {k:'draft', v:d}); } catch(_) {} }
+async function clearDraft(){ try { await DB.del('kv', 'draft'); } catch(_) {} }
+
+function openEntry(id, color, draft){
+  const isNew = draft ? draft.isNew : !id;
+  const e = draft ? draft.e
+    : isNew ? {id:uid(), type:'e', date:S.day, time: S.day === todayStr() ? nowTime() : '12:00', ts:Date.now(), color, qui:'', what:'', need:'', feel:[], moi:{}, elle:{}, air:false, photos:[], repair:null}
+            : JSON.parse(JSON.stringify(S.items.find(x => x.id === id)));
   e.moi = e.moi || {}; e.elle = e.elle || {}; e.feel = e.feel || []; e.photos = e.photos || [];
-  let suggestionDismissed = false;
-  const removedPhotos = [];
-  const newPhotos = []; // {id, blob}
+  let suggestionDismissed = draft ? !!draft.sug : false;
+  const removedPhotos = draft ? (draft.removed || []) : [];
+  const newPhotos = draft ? (draft.newPhotos || []) : [];
+  const original = draft ? draft.original : JSON.stringify(e);
+  const open = draft ? (draft.open || {}) : {
+    moiActs: Object.keys(e.moi).length > 0 || e.air,
+    raconter: !!(e.what || e.need || e.photos.length)
+  };
 
-  const original = JSON.stringify(e);
-  const ov = sheet('', '', '', () => { syncText(); return JSON.stringify(e) !== original || newPhotos.length > 0 || removedPhotos.length > 0; });
-  const headEl = ov.querySelector('.head');
-  const bodyEl = ov.querySelector('.body');
-  const footEl = ov.querySelector('.foot');
+  const ov = document.createElement('div');
+  ov.className = 'overlay page';
+  ov.innerHTML = `<div class="sheet full" role="dialog" aria-modal="true" aria-label="Moment"><div class="head"></div><div class="body"></div><div class="foot"></div></div>`;
+  document.body.appendChild(ov);
+  const headEl = ov.querySelector('.head'), bodyEl = ov.querySelector('.body'), footEl = ov.querySelector('.foot');
 
-  function sideHTML(side, title){
+  const isDirty = () => { syncText(); return JSON.stringify(e) !== original || newPhotos.length > 0 || removedPhotos.length > 0; };
+  let draftTimer = null;
+  const persist = () => { clearTimeout(draftTimer); draftTimer = setTimeout(() => { if (document.body.contains(ov)) saveDraft({isNew, e, original, sug:suggestionDismissed, removed:removedPhotos, newPhotos:newPhotos.map(p => ({id:p.id, blob:p.blob})), open}); }, 300); };
+  const close = async () => { clearTimeout(draftTimer); await clearDraft(); ov.remove(); };
+  ov.tryClose = async () => { if (!isDirty() || confirm("Fermer sans enregistrer ? Ce que tu viens d'écrire sera perdu.")) await close(); };
+
+  function actChips(side){
     const sel = e[side];
-    return `<div class="side"><h3>${title}</h3>
-      <div class="chips">${actTiles().map(t => `<button class="chip ${t in sel ? 'on' : ''}" data-side="${side}" data-tile="${esc(t)}" aria-pressed="${t in sel}">${esc(t)}</button>`).join('')}
+    return `<div class="chips">${actTiles().map(t => `<button class="chip ${t in sel ? 'on' : ''}" data-side="${side}" data-tile="${esc(t)}" aria-pressed="${t in sel}">${esc(t)}</button>`).join('')}
       <button class="chip add" data-addact="${side}">+ Ma tuile</button></div>
-      ${Object.keys(sel).length ? `<div class="annot">${Object.keys(sel).map(t => `<div class="a"><span>${esc(t)}</span><input type="text" data-annot="${side}" data-tile="${esc(t)}" value="${esc(sel[t])}" placeholder="Petite précision…"></div>`).join('')}</div>` : ''}
-    </div>`;
+      ${Object.keys(sel).length ? `<div class="annot">${Object.keys(sel).map(t => `<div class="a"><span>${esc(t)}</span><input type="text" data-annot="${side}" data-tile="${esc(t)}" value="${esc(sel[t])}" placeholder="Petite précision…"></div>`).join('')}</div>` : ''}`;
+  }
+  function fold(key, title, inner){
+    return `<div class="side"><button class="foldbtn" data-fold="${key}" aria-expanded="${!!open[key]}"><span>${title}</span><span aria-hidden="true">${open[key] ? '▾' : '▸'}</span></button>${open[key] ? `<div style="margin-top:10px">${inner}</div>` : ''}</div>`;
   }
   function needsSuggestion(){
-    if (suggestionDismissed) return false;
-    if (RANK[e.color] >= RANK.r) return false;
+    if (suggestionDismissed || RANK[e.color] >= RANK.r) return false;
     return GRAVE.some(g => g in e.elle || g in e.moi);
   }
   function draw(){
     const keepScroll = bodyEl.scrollTop;
-    headEl.innerHTML = `<div class="grab"></div><div class="row">
-      <span class="dot c-${e.color}" style="width:28px;height:28px;border-radius:14px"></span>
-      <div style="flex:1"><div style="font-size:18px;font-weight:700">Moment ${COLORS[e.color].name.toLowerCase()}</div>
-      <div class="sub">${esc(COLORS[e.color].label)} · ${esc(shortDate(e.date))} · <input type="time" id="etime" value="${esc(e.time)}" aria-label="Heure" style="width:auto;padding:2px 6px;font-size:13px;border-radius:6px"></div></div>
-      <button class="iconbtn" data-close aria-label="Fermer">${ICON.close}</button></div>`;
+    headEl.innerHTML = `<div class="row">
+      <button class="iconbtn" data-close aria-label="Retour">${ICON.left}</button>
+      <span class="dot c-${e.color}" style="width:26px;height:26px;border-radius:13px"></span>
+      <div style="flex:1;min-width:0"><div style="font-size:18px;font-weight:700">${TITLES[e.color]}</div>
+        <div class="sub row" style="gap:6px">${esc(shortDate(e.date))} · <input type="time" id="etime" value="${esc(e.time)}" aria-label="Heure" style="width:auto;padding:2px 6px;font-size:13px;border-radius:6px"></div></div>
+    </div>`;
     bodyEl.innerHTML = `
       ${needsSuggestion() ? `<div class="banner warn"><strong>${esc(GRAVE.find(g => g in e.elle || g in e.moi))}, c'est sérieux.</strong> Ce serait plutôt une pastille rouge ? C'est toi qui choisis.
         <div class="three"><button id="sugRed" style="border:none;background:var(--r);color:#1A0B0B;font-weight:700">Passer en rouge</button><button id="sugKeep" style="border-color:#6B4A1A">Garder</button></div></div>` : ''}
-      <label class="q" for="ewhat">Qu'est-ce qui s'est passé ?</label>
-      <textarea id="ewhat" rows="3" placeholder="Facultatif">${esc(e.what)}</textarea>
-      <div class="q">Comment te sens-tu ?</div>
-      <div class="chips">${feelTiles().map(t => `<button class="chip ${e.feel.includes(t) ? 'on' : ''}" data-feel="${esc(t)}" aria-pressed="${e.feel.includes(t)}">${esc(t)}</button>`).join('')}
-        <button class="chip add" id="addfeel">+ Ma tuile</button></div>
-      <div class="q">Qui ?</div>
+      <div class="side"><h3>Elle <span class="sub" style="font-weight:400">· ${ELLE_HINT}</span></h3>${actChips('elle')}</div>
+      <div class="side"><h3>Moi <span class="sub" style="font-weight:400">· comment je me sens</span></h3>
+        <div class="chips">${feelTiles().map(t => `<button class="chip ${e.feel.includes(t) ? 'on' : ''}" data-feel="${esc(t)}" aria-pressed="${e.feel.includes(t)}">${esc(t)}</button>`).join('')}
+        <button class="chip add" id="addfeel">+ Ma tuile</button></div></div>
+      ${fold('moiActs', "Et moi, ce que j'ai fait", `${actChips('moi')}<div class="chips" style="margin-top:10px"><button class="chip ${e.air ? 'on' : ''}" id="air" aria-pressed="${e.air}">J'ai pris l'air</button></div>`)}
+      ${fold('raconter', 'Raconter', `
+        <label class="q" for="ewhat" style="margin-top:0">Qu'est-ce qui s'est passé ?</label>
+        <textarea id="ewhat" rows="3" placeholder="Facultatif">${esc(e.what)}</textarea>
+        <label class="q" for="eneed">De quoi tu aurais eu besoin ?</label>
+        <textarea id="eneed" rows="2" placeholder="Facultatif">${esc(e.need)}</textarea>
+        <div class="q">Photos</div>
+        <div class="photos">${e.photos.map(p => `<div class="ph"><img data-photo="${p}" alt="Photo jointe"><button data-rmph="${p}" aria-label="Retirer la photo">×</button></div>`).join('')}
+          ${newPhotos.map(p => `<div class="ph"><img src="${p.url || (p.url = URL.createObjectURL(p.blob))}" alt="Photo jointe"><button data-rmnew="${p.id}" aria-label="Retirer la photo">×</button></div>`).join('')}
+          <button class="ph" id="addph" style="border:1px dashed var(--dim);color:var(--muted);font-size:28px" aria-label="Joindre une photo">+</button></div>`)}
+      <div class="q">Qui ? <span class="sub" style="font-weight:400">(facultatif)</span></div>
       <div class="three" style="margin-top:0">${Object.entries(QUI).map(([k,l]) => `<button data-qui="${k}" style="${e.qui===k ? 'border-color:var(--accent);background:var(--accent-bg);font-weight:600' : 'border-color:var(--border)'}" aria-pressed="${e.qui===k}">${l}</button>`).join('')}</div>
-      <div class="q" style="margin-bottom:0">Ce qui s'est joué <span class="sub" style="font-weight:400">(touche, puis précise si tu veux)</span></div>
-      ${sideHTML('elle','Elle')}
-      ${sideHTML('moi','Moi')}
-      <div class="chips" style="margin-top:10px"><button class="chip ${e.air ? 'on' : ''}" id="air" aria-pressed="${e.air}">J'ai pris l'air</button></div>
-      <label class="q" for="eneed">De quoi tu aurais eu besoin ?</label>
-      <textarea id="eneed" rows="2" placeholder="Facultatif">${esc(e.need)}</textarea>
-      <div class="q">Photos</div>
-      <div class="photos" id="eph">${e.photos.map(p => `<div class="ph"><img data-photo="${p}" alt="Photo jointe"><button data-rmph="${p}" aria-label="Retirer la photo">×</button></div>`).join('')}
-        ${newPhotos.map(p => `<div class="ph"><img src="${p.url || (p.url = URL.createObjectURL(p.blob))}" alt="Photo jointe"><button data-rmnew="${p.id}" aria-label="Retirer la photo">×</button></div>`).join('')}
-        <button class="ph" id="addph" style="border:1px dashed var(--dim);color:var(--muted);font-size:28px" aria-label="Joindre une photo">+</button></div>
       ${!isNew ? `<div class="q">Changer la couleur</div><div class="pastilles">${ORDER.map(c => `<button class="pbtn c-${c}" data-recolor="${c}" style="width:44px;height:44px;${c===e.color ? 'outline:3px solid var(--accent);outline-offset:3px' : ''}" aria-label="Passer en ${COLORS[c].name.toLowerCase()}"></button>`).join('')}</div>` : ''}
       ${!isNew && (e.color === 'r' || e.color === 'k') ? `<div class="q">Ça s'est réparé ?</div><div class="three" style="margin-top:0">${Object.entries(REPAIR).map(([k,l]) => `<button data-rep="${k}" style="${e.repair===k ? 'border-color:var(--accent);background:var(--accent-bg);font-weight:600' : 'border-color:var(--border)'}">${l}</button>`).join('')}</div>` : ''}
-    `;
+      <div style="height:20px"></div>`;
     footEl.innerHTML = `${!isNew ? '<button class="btn danger" id="edel">Supprimer</button>' : ''}<button class="btn primary" id="eok" style="flex:1">Valider</button>`;
     bodyEl.scrollTop = keepScroll;
     fillPhotos(bodyEl);
     bind();
+    persist();
   }
   function syncText(){
     const w = ov.querySelector('#ewhat'), n = ov.querySelector('#eneed'), tm = ov.querySelector('#etime');
@@ -498,6 +533,8 @@ function openEntry(id, color){
   }
   function bind(){
     ov.querySelectorAll('[data-close]').forEach(b => b.onclick = () => ov.tryClose());
+    ov.querySelectorAll('textarea, input').forEach(i => i.addEventListener('input', () => { syncText(); persist(); }));
+    ov.querySelectorAll('[data-fold]').forEach(b => b.onclick = () => { syncText(); open[b.dataset.fold] = !open[b.dataset.fold]; draw(); });
     ov.querySelectorAll('[data-feel]').forEach(b => b.onclick = () => { syncText(); const t = b.dataset.feel; e.feel = e.feel.includes(t) ? e.feel.filter(x => x !== t) : [...e.feel, t]; draw(); });
     ov.querySelectorAll('[data-qui]').forEach(b => b.onclick = () => { syncText(); e.qui = e.qui === b.dataset.qui ? '' : b.dataset.qui; draw(); });
     ov.querySelectorAll('[data-side]').forEach(b => b.onclick = () => { syncText(); const s = e[b.dataset.side], t = b.dataset.tile; if (t in s) delete s[t]; else s[t] = ''; draw(); });
@@ -524,9 +561,9 @@ function openEntry(id, color){
       for (const p of newPhotos) { await DB.put('photos', {id:p.id, blob:p.blob}); e.photos.push(p.id); }
       for (const p of removedPhotos) await DB.del('photos', p);
       await saveItem(e);
-      ov.remove(); toast('Moment enregistré'); render();
+      await close(); toast('Moment enregistré'); render();
     };
-    const del = ov.querySelector('#edel'); if (del) del.onclick = async () => { if (confirm('Supprimer ce moment ? Ce sera définitif.')) { await deleteItem(e.id); ov.remove(); render(); } };
+    const del = ov.querySelector('#edel'); if (del) del.onclick = async () => { if (confirm('Supprimer ce moment ? Ce sera définitif.')) { await deleteItem(e.id); await close(); render(); } };
   }
   draw();
 }

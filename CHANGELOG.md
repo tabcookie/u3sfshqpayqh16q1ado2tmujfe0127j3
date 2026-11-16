@@ -1,5 +1,11 @@
 # Journal des versions
 
+## v1.6 — 16 nov. 2026
+- Noire : « Insultes / Humiliation » en une tuile, nouvelle tuile « Phrase de trop », « Dépassement de limite » retiré ; côté Moi « Éloignement urgent ».
+- « J'ai pris l'air » seulement sur l'orange.
+- Écran « comment elle se sent » retiré (les anciennes données restent dans les bilans).
+- Nouveau dernier écran sur orange, rouge et noire : « Elle s'est rattrapée ? » avec ⚪/🟢/🟠 et un texte par tuile ; bouton ↺ dans le Livre pour l'ajouter plus tard ; compté dans les stats et les bilans.
+
 ## v1.5 — 16 nov. 2026
 - Tuiles de base triées par couleur (positif en blanc/vert, petits accrocs en orange, prises de tête en rouge, le pire en noir), séparées entre ce qui a été fait et comment on se sent.
 - Toucher une tuile ouvre une bulle pour écrire ; OK la referme.
@@ -35,6 +41,8 @@
 Première version complète : PIN, Livre, pastilles, Noires, Stats, Bilans, Réglages, sauvegarde.
 
 ## À faire plus tard
-- Affiner les tuiles de base à l'usage.
+- Affiner les tuiles de base à l'usage ; creuser le vert et le blanc.
+- Page « Non » du rattrapage (idée à venir).
+- Voir si « Ça s'est réparé ? » reste utile à côté du rattrapage.
 - Icône d'écran d'accueil (PNG) et fonctionnement hors connexion (service worker) au moment de la mise en ligne.
 - Design (plus tard, à sa demande).

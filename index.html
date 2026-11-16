@@ -40,7 +40,10 @@ h1{font-size:22px;margin:4px 0 4px}
 .c-w{background:var(--w)} .c-g{background:var(--g)} .c-o{background:var(--o)} .c-r{background:var(--r)} .c-k{background:var(--k);box-shadow:0 0 0 2px #7A7A84}
 .dot.sm.c-k{box-shadow:0 0 0 1px #8A8A94}
 .item{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);width:100%;background:none;border-left:none;border-right:none;border-top:none;text-align:left;color:var(--text)}
-.item:last-child{border-bottom:none}
+.item:last-child,.entrywrap:last-child .item{border-bottom:none}
+.entrywrap{position:relative}
+.rattbtn{position:absolute;right:0;top:50%;transform:translateY(-50%);width:44px;height:44px;border-radius:22px;border:1px solid var(--border);background:var(--bg);color:var(--accent);font-size:20px}
+.rattpick{display:flex;flex-direction:column;align-items:center;gap:6px;background:none;border:none;color:var(--text);font-size:13px;min-width:64px;padding:4px}
 .item .meta{font-size:13px;color:var(--muted)}
 .item .txt{font-size:15px;margin-top:3px;line-height:1.4;white-space:pre-wrap}
 .empty{color:var(--muted);font-style:italic}
@@ -149,11 +152,14 @@ const TILES = {
       feel:['Stress','Ennui','Flemme','Agacé(e)','Fatigué(e)']},
   r: {acts:['Prise de tête','Communication risquée',"Risque d'engueulade",'Critique','Défensive','Mur','A crié','Ton qui monte','Ignoré(e)'],
       feel:['Gros stress','Tendu(e)','Colère','Blessé(e)','Seul(e)','Épuisé(e)']},
-  k: {acts:['Mépris','Insultes','Reproches','Laisser tomber','Dépassement de limite','Menace','Humiliation'],
+  k: {acts:['Mépris','Insultes / Humiliation','Phrase de trop','Reproches','Laisser tomber','Menace'], moiActs:['Éloignement urgent'],
       feel:['Stress énorme','Rage','Humilié(e)','Abandonné(e)','Dégoûté(e)','Brisé(e)','Peur']}
 };
 const CAVALIERS = ['Critique','Mépris','Défensive','Mur'];
-const GRAVE = ['Mépris','Insulte','Insultes'];
+const GRAVE = ['Mépris','Insulte','Insultes','Insultes / Humiliation'];
+// rattrapage : comment elle s'est rattrapée sur chaque tuile
+const RATT = {w:'Totalement', g:'Le gros', o:'Un peu'};
+const RATT_COLORS = ['o','r','k'];
 
 const QUI = {elle:'Elle', moi:'Moi', deux:'Les deux'};
 const REPAIR = {oui:'Oui', partie:'En partie', non:'Non'};
@@ -243,9 +249,9 @@ const byDay = d => S.items.filter(i => i.date === d).sort((a,b) => (a.time||'').
 const myTiles = (c, kind) => ((S.settings.tiles || {})[c] || {})[kind] || [];
 const uniq = a => [...new Set(a)];
 const feelTiles = c => uniq([...TILES[c].feel, ...myTiles(c, 'feel'), ...(S.settings.feel || [])]);
-const actTiles = c => uniq([...TILES[c].acts, ...myTiles(c, 'acts'), ...(S.settings.acts || [])]);
+const actTiles = (c, side) => uniq([...TILES[c].acts, ...(side === 'moi' ? TILES[c].moiActs || [] : []), ...myTiles(c, 'acts'), ...(S.settings.acts || [])]);
 async function addMyTile(c, kind, name){
-  if ((kind === 'acts' ? actTiles(c) : feelTiles(c)).includes(name)) return;
+  if ((kind === 'acts' ? actTiles(c, 'moi') : feelTiles(c)).includes(name)) return;
   S.settings.tiles = S.settings.tiles || {};
   S.settings.tiles[c] = S.settings.tiles[c] || {acts:[], feel:[]};
   (S.settings.tiles[c][kind] = S.settings.tiles[c][kind] || []).push(name);
@@ -382,14 +388,18 @@ function entryLine(e){
   if (e.air) tags.push("J'ai pris l'air");
   const ph = (e.photos||[]).length + (e.ellePhotos||[]).length;
   const txt = e.what || e.elleNote || (e.feel && e.feel.length ? e.feel.join(', ') : '');
-  return `<button class="item" data-entry="${e.id}">
+  const rt = e.ratt && e.ratt.ok === 'oui' ? Object.values(e.ratt.tiles) : [];
+  const rattLine = e.ratt && e.ratt.ok ? (e.ratt.ok === 'non' ? 'Rattrapée : non' : 'Rattrapée : ' + (rt.length ? ['w','g','o'].filter(c => rt.some(r => r.lvl === c)).map(c => RATT[c].toLowerCase() + ' ' + rt.filter(r => r.lvl === c).length).join(' · ') : 'oui')) : '';
+  const canRatt = RATT_COLORS.includes(e.color);
+  return `<div class="entrywrap"><button class="item" data-entry="${e.id}" ${canRatt ? 'style="padding-right:52px"' : ''}>
     <span class="dot c-${e.color}" style="margin-top:3px"></span>
     <span style="flex:1;min-width:0">
       <span class="between meta"><span>${esc(parts.join(' · '))}</span><span>${ph ? ph + ' photo' + (ph>1?'s':'') : ''}</span></span>
       ${tags.length ? `<span class="meta" style="display:block;margin-top:2px">${esc(tags.join(' · '))}</span>` : ''}
       <span class="txt ${txt ? '' : 'empty'}" style="display:block">${txt ? esc(txt) : 'À compléter : touche pour écrire'}</span>
       ${e.repair ? `<span class="meta" style="display:block;margin-top:4px">Réparé : ${esc(REPAIR[e.repair])}</span>` : ''}
-    </span></button>`;
+      ${rattLine ? `<span class="meta" style="display:block;margin-top:4px">${esc(rattLine)}</span>` : ''}
+    </span></button>${canRatt ? `<button class="rattbtn" data-ratt="${e.id}" aria-label="Ajouter un rattrapage">↺</button>` : ''}</div>`;
 }
 function renderLivre(m){
   const t = todayStr();
@@ -439,6 +449,7 @@ function renderLivre(m){
   $('#settings').onclick = () => { S.tab = 'reglages'; render(); };
   m.querySelectorAll('[data-new]').forEach(b => b.onclick = () => openEntry(null, b.dataset.new));
   m.querySelectorAll('[data-entry]').forEach(b => b.onclick = () => openEntry(b.dataset.entry));
+  m.querySelectorAll('[data-ratt]').forEach(b => b.onclick = () => openEntry(b.dataset.ratt, null, null, 'ratt'));
   m.querySelectorAll('[data-repair]').forEach(b => b.onclick = async () => { const e = S.items.find(x => x.id === b.dataset.repair); e.repair = b.dataset.v; await saveItem(e); toast('Noté'); render(); });
   m.querySelectorAll('[data-note]').forEach(b => b.onclick = () => openNote(b.dataset.note));
   $('#addnote').onclick = async () => {
@@ -484,7 +495,7 @@ const TITLES = {w:'Journée parfaite', g:'Bon moment', o:'Moment tendu', r:'Mome
 async function saveDraft(d){ try { await DB.put('kv', {k:'draft', v:d}); } catch(_) {} }
 async function clearDraft(){ try { await DB.del('kv', 'draft'); } catch(_) {} }
 
-function openEntry(id, color, draft){
+function openEntry(id, color, draft, startAt){
   const isNew = draft ? draft.isNew : !id;
   const e = draft ? draft.e
     : isNew ? {id:uid(), type:'e', date:S.day, time: S.day === todayStr() ? nowTime() : '12:00', ts:Date.now(), color, qui:'', what:'', need:'', feel:[], feelNotes:{}, moi:{}, elle:{}, elleFeel:[], elleFeelNotes:{}, elleNote:'', ellePhotos:[], air:false, photos:[], repair:null}
@@ -492,7 +503,7 @@ function openEntry(id, color, draft){
   // compatibilité avec les anciens moments
   e.moi = e.moi || {}; e.elle = e.elle || {}; e.feel = e.feel || []; e.photos = e.photos || [];
   e.elleFeel = e.elleFeel || []; e.elleNote = e.elleNote || ''; e.ellePhotos = e.ellePhotos || [];
-  e.what = e.what || ''; e.need = e.need || ''; e.feelNotes = e.feelNotes || {}; e.elleFeelNotes = e.elleFeelNotes || {};
+  e.what = e.what || ''; e.need = e.need || ''; e.feelNotes = e.feelNotes || {}; e.elleFeelNotes = e.elleFeelNotes || {}; e.ratt = e.ratt || {ok:'', tiles:{}}; e.ratt.tiles = e.ratt.tiles || {};
   let suggestionDismissed = draft ? !!draft.sug : false;
   const removedPhotos = draft ? (draft.removed || []) : [];
   const newPhotos = draft ? (draft.newPhotos || []).map(p => ({side:'moi', ...p})) : [];
@@ -512,8 +523,11 @@ function openEntry(id, color, draft){
   ov.tryClose = async () => { if (!isDirty() || confirm("Fermer sans enregistrer ? Ce que tu viens d'écrire sera perdu.")) await close(); };
 
   // un écran par choix : Qui ? puis la personne choisie, puis l'autre
-  const steps = () => { const o = e.qui === 'moi' ? ['moi','elle'] : ['elle','moi']; return ['qui', ...o.flatMap(s => [s+'Act', s+'Feel', s+'Note'])]; };
-  const STEP_TITLE = {qui:'Qui ?', elleAct:"Elle · ce qu'elle a fait", elleFeel:'Elle · comment elle se sent', elleNote:'Elle · note', moiAct:"Moi · ce que j'ai fait", moiFeel:'Moi · comment je me sens', moiNote:'Moi · note'};
+  // pas d'écran « comment elle se sent » : il ne peut pas savoir à sa place
+  const sideSteps = s => s === 'elle' ? ['elleAct','elleNote'] : ['moiAct','moiFeel','moiNote'];
+  const steps = () => { const o = e.qui === 'moi' ? ['moi','elle'] : ['elle','moi']; return ['qui', ...o.flatMap(sideSteps), ...(RATT_COLORS.includes(e.color) ? ['ratt'] : [])]; };
+  if (startAt) step = Math.max(0, steps().indexOf(startAt));
+  const STEP_TITLE = {qui:'Qui ?', elleAct:"Elle · ce qu'elle a fait", elleFeel:'Elle · comment elle se sent', elleNote:'Elle · note', moiAct:"Moi · ce que j'ai fait", moiFeel:'Moi · comment je me sens', moiNote:'Moi · note', ratt:"Elle s'est rattrapée ?"};
   const feelKey = side => side === 'elle' ? 'elleFeel' : 'feel';
   const feelNotesKey = side => side === 'elle' ? 'elleFeelNotes' : 'feelNotes';
   const photoKey = side => side === 'elle' ? 'ellePhotos' : 'photos';
@@ -526,7 +540,7 @@ function openEntry(id, color, draft){
   }
   function actChips(side){
     const sel = e[side];
-    return `<div class="chips">${withSelected(actTiles(e.color), Object.keys(sel)).map(t => `<button class="chip ${t in sel ? 'on' : ''}" data-side="${side}" data-tile="${esc(t)}" aria-pressed="${t in sel}">${esc(t)}${sel[t] ? ' ✎' : ''}</button>`).join('')}
+    return `<div class="chips">${withSelected(actTiles(e.color, side), Object.keys(sel)).map(t => `<button class="chip ${t in sel ? 'on' : ''}" data-side="${side}" data-tile="${esc(t)}" aria-pressed="${t in sel}">${esc(t)}${sel[t] ? ' ✎' : ''}</button>`).join('')}
       <button class="chip add" data-addact="${side}">+ Ma tuile</button></div>${preview('side', side, sel)}`;
   }
   function feelChips(side){
@@ -572,6 +586,7 @@ function openEntry(id, color, draft){
   }
   function stepHasContent(k){
     if (k === 'qui') return !!e.qui;
+    if (k === 'ratt') return !!e.ratt.ok;
     const side = k.startsWith('elle') ? 'elle' : 'moi';
     if (k.endsWith('Act')) return Object.keys(e[side]).length > 0 || (side === 'moi' && e.air);
     if (k.endsWith('Feel')) return e[feelKey(side)].length > 0;
@@ -583,12 +598,21 @@ function openEntry(id, color, draft){
       <div class="sub" style="margin:14px 0 4px">Qui est en cause ?</div>
       <div style="display:flex;flex-direction:column;gap:10px;margin-top:10px">${Object.entries(QUI).map(([q,l]) => `<button class="btn block" data-qui="${q}" style="height:60px;font-size:18px;${e.qui===q ? 'border-color:var(--accent);background:var(--accent-bg);font-weight:700' : ''}" aria-pressed="${e.qui===q}">${l}</button>`).join('')}</div>
       <small class="hint" style="margin-top:12px">On passera ensuite par Elle et par Moi : sur chaque écran tu choisis, ou tu passes s'il n'y a rien.</small>`;
+    if (k === 'ratt') {
+      const rows = Object.keys(e.elle).length ? Object.keys(e.elle) : ['Dans l\'ensemble'];
+      return `<div class="three" style="margin-top:14px">${[['oui','Oui'],['non','Non']].map(([v,l]) => `<button data-rok="${v}" style="height:52px;font-size:17px;${e.ratt.ok===v ? 'border-color:var(--accent);background:var(--accent-bg);font-weight:700' : 'border-color:var(--border)'}" aria-pressed="${e.ratt.ok===v}">${l}</button>`).join('')}</div>
+      ${e.ratt.ok === 'oui' ? rows.map(t => { const r = e.ratt.tiles[t] || {}; return `<div class="side"><div style="font-weight:700">${esc(t)}</div>
+        <div class="row" style="gap:14px;margin-top:10px">${Object.entries(RATT).map(([c,l]) => `<button class="rattpick" data-rlvl="${c}" data-tile="${esc(t)}" aria-pressed="${r.lvl===c}"><span class="dot c-${c}" style="width:22px;height:22px;border-radius:11px;${r.lvl===c ? 'outline:3px solid var(--accent);outline-offset:2px' : ''}"></span><span>${l}</span></button>`).join('')}</div>
+        ${r.lvl ? `<textarea data-rhow="${esc(t)}" rows="3" style="margin-top:10px" placeholder="Comment ? (facultatif)">${esc(r.how || '')}</textarea>` : ''}</div>`; }).join('') : ''}
+      ${e.ratt.ok === 'non' ? `<small class="hint" style="margin-top:12px">Noté. Une page dédiée viendra plus tard.</small>` : ''}
+      <small class="hint" style="margin-top:12px">Tu pourras aussi l'ajouter plus tard avec ↺ sur le moment, dans le Livre.</small>`;
+    }
     const side = k.startsWith('elle') ? 'elle' : 'moi';
     if (k.endsWith('Act')) return `
       ${needsSuggestion() ? `<div class="banner warn"><strong>${esc(GRAVE.find(g => g in e.elle || g in e.moi))}, c'est sérieux.</strong> Ce serait plutôt une pastille rouge ? C'est toi qui choisis.
         <div class="three"><button id="sugRed" style="border:none;background:var(--r);color:#1A0B0B;font-weight:700">Passer en rouge</button><button id="sugKeep" style="border-color:#6B4A1A">Garder</button></div></div>` : ''}
       <div style="margin-top:14px">${actChips(side)}</div>
-      ${side === 'moi' ? `<div class="chips" style="margin-top:10px"><button class="chip ${e.air ? 'on' : ''}" id="air" aria-pressed="${e.air}">J'ai pris l'air</button></div>` : ''}`;
+      ${side === 'moi' && (e.color === 'o' || e.air) ? `<div class="chips" style="margin-top:10px"><button class="chip ${e.air ? 'on' : ''}" id="air" aria-pressed="${e.air}">J'ai pris l'air</button></div>` : ''}`;
     if (k.endsWith('Feel')) return `<div style="margin-top:14px">${feelChips(side)}</div>`;
     if (side === 'elle') return `
       <label class="q" for="enote">Note sur elle</label>
@@ -628,6 +652,7 @@ function openEntry(id, color, draft){
   function syncText(){
     const w = ov.querySelector('#ewhat'), n = ov.querySelector('#eneed'), en = ov.querySelector('#enote'), tm = ov.querySelector('#etime');
     if (w) e.what = w.value; if (n) e.need = n.value; if (en) e.elleNote = en.value; if (tm && tm.value) e.time = tm.value;
+    ov.querySelectorAll('[data-rhow]').forEach(i => { const t = i.dataset.rhow; if (e.ratt.tiles[t]) e.ratt.tiles[t].how = i.value; });
   }
   function bind(){
     ov.querySelectorAll('[data-close]').forEach(b => b.onclick = () => ov.tryClose());
@@ -640,6 +665,8 @@ function openEntry(id, color, draft){
     ov.querySelectorAll('[data-side]').forEach(b => b.onclick = () => { syncText(); tapAct(b.dataset.side, b.dataset.tile); });
     ov.querySelectorAll('[data-addact]').forEach(b => b.onclick = async () => { syncText(); const v = (prompt(`Nom de ta tuile (${COLORS[e.color].name.toLowerCase()}, ce qui a été fait) :`) || '').trim(); if (!v) return; await addMyTile(e.color, 'acts', v); if (!(v in e[b.dataset.addact])) tapAct(b.dataset.addact, v); else redraw(); });
     ov.querySelectorAll('[data-addfeel]').forEach(b => b.onclick = async () => { syncText(); const v = (prompt(`Nom de ta tuile (${COLORS[e.color].name.toLowerCase()}, ressenti) :`) || '').trim(); if (!v) return; await addMyTile(e.color, 'feel', v); if (!e[feelKey(b.dataset.addfeel)].includes(v)) tapFeel(b.dataset.addfeel, v); else redraw(); });
+    ov.querySelectorAll('[data-rok]').forEach(b => b.onclick = () => { syncText(); e.ratt.ok = e.ratt.ok === b.dataset.rok ? '' : b.dataset.rok; redraw(); });
+    ov.querySelectorAll('[data-rlvl]').forEach(b => b.onclick = () => { syncText(); const t = b.dataset.tile, r = e.ratt.tiles[t] || {}; if (r.lvl === b.dataset.rlvl) delete e.ratt.tiles[t]; else e.ratt.tiles[t] = {lvl:b.dataset.rlvl, how:r.how || ''}; redraw(); });
     const wq = ov.querySelector('#wquick'); if (wq) wq.onclick = async () => { syncText(); await saveItem(e); await close(); toast('Journée parfaite notée'); render(); };
     const air = ov.querySelector('#air'); if (air) air.onclick = () => { syncText(); e.air = !e.air; redraw(); };
     const sr = ov.querySelector('#sugRed'); if (sr) sr.onclick = () => { syncText(); e.color = 'r'; redraw(); };
@@ -659,6 +686,8 @@ function openEntry(id, color, draft){
       Object.keys(e.elle).forEach(k => e.elle[k] = (e.elle[k]||'').trim());
       Object.keys(e.moi).forEach(k => e.moi[k] = (e.moi[k]||'').trim());
       e.what = e.what.trim(); e.need = e.need.trim(); e.elleNote = e.elleNote.trim();
+      Object.values(e.ratt.tiles).forEach(r => r.how = (r.how || '').trim());
+      if (e.ratt.ok !== 'oui') e.ratt.tiles = {};
       for (const p of newPhotos) { await DB.put('photos', {id:p.id, blob:p.blob}); e[photoKey(p.side)].push(p.id); }
       for (const p of removedPhotos) await DB.del('photos', p);
       await saveItem(e);
@@ -754,6 +783,7 @@ function renderStats(m){
     const qui = {elle:0, moi:0, deux:0}; list.forEach(e => { if (e.qui) qui[e.qui]++; });
     const rep = {oui:0, partie:0, non:0}; list.filter(e => e.repair).forEach(e => rep[e.repair]++);
     const air = list.filter(e => e.air).length;
+    const rt = {oui:0, non:0, w:0, g:0, o:0}; list.forEach(e => { if (!e.ratt || !e.ratt.ok) return; rt[e.ratt.ok]++; Object.values(e.ratt.tiles||{}).forEach(r => rt[r.lvl]++); });
     const maxCav = Math.max(1, ...CAVALIERS.map(k => (elle[k]||0) + (moi[k]||0)));
     const rColor = r === null ? 'var(--dim)' : (r >= 5 ? 'var(--g)' : r >= 1 ? 'var(--o)' : 'var(--r)');
     body.innerHTML = `${monthNav}
@@ -772,8 +802,10 @@ function renderStats(m){
       <div class="card"><div class="sub">Qui ?</div><div style="font-size:14px;margin-top:6px;line-height:1.7">Elle ${qui.elle} · Moi ${qui.moi}<br>Les deux ${qui.deux}</div></div>
       <div class="card"><div class="sub">Réparé ?</div><div style="font-size:14px;margin-top:6px;line-height:1.7">Oui ${rep.oui} · En partie ${rep.partie}<br>Non ${rep.non}</div></div>
     </div>
+    <div class="card"><div class="sub">Elle s'est rattrapée ?</div><div style="font-size:14px;margin-top:6px;line-height:1.7">Oui ${rt.oui} · Non ${rt.non}<br>
+      ${['w','g','o'].map(c => `<span class="row" style="display:inline-flex;gap:4px;margin-right:10px"><span class="dot c-${c}" style="width:10px;height:10px"></span>${RATT[c]} ${rt[c]}</span>`).join('')}</div></div>
     <div class="card"><div class="sub" style="margin-bottom:6px">Toutes les tuiles du mois</div>
-      ${allTiles("Ce qu'elle a fait", elle)}${allTiles('Comment elle se sent', feelCounts(list, 'elleFeel'))}${allTiles("Ce que j'ai fait", moi)}${allTiles('Comment je me sens', feelCounts(list, 'feel'))}
+      ${allTiles("Ce qu'elle a fait", elle)}${Object.keys(feelCounts(list, 'elleFeel')).length ? allTiles('Comment elle se sent (avant v1.6)', feelCounts(list, 'elleFeel')) : ''}${allTiles("Ce que j'ai fait", moi)}${allTiles('Comment je me sens', feelCounts(list, 'feel'))}
       <small class="hint">« J'ai pris l'air » : ${air} fois</small></div>`;
     function allTiles(title, m2){ const o = topN(m2, 999); const mx = Math.max(1, ...o.map(x => x[1])); return `<div style="font-size:14px;font-weight:600;margin:12px 0 6px">${title}</div>${o.length ? `<div class="bars">${o.map(([k,v]) => `<span>${esc(k)}</span><div class="bar"><i style="width:${v/mx*100}%;background:${tileColor(k)}"></i></div><span>${v}</span>`).join('')}</div>` : '<span class="empty" style="font-size:13px">Rien encore</span>'}`; }
     function topList(title, m2){ const o = topN(Object.fromEntries(Object.entries(m2).filter(([k]) => !CAVALIERS.includes(k))), 4); return o.length ? `<div style="font-size:13px;margin-top:10px"><span class="sub">${title} : </span>${o.map(([k,v]) => esc(k) + ' ' + v).join(' · ')}</div>` : ''; }
@@ -900,6 +932,8 @@ function periodText(from, to, label){
         if (i.air) L.push(`  - J'ai pris l'air`);
         if (i.need) L.push(`  - Ce dont j'aurais eu besoin : ${i.need}`);
         if (i.repair) L.push(`  - Réparé : ${REPAIR[i.repair]}`);
+        if (i.ratt && i.ratt.ok === 'non') L.push(`  - Rattrapée : non`);
+        if (i.ratt && i.ratt.ok === 'oui') { L.push(`  - Rattrapée : oui`); Object.entries(i.ratt.tiles||{}).forEach(([t,r]) => L.push(`    - ${t} : ${RATT[r.lvl]}${r.how ? ' (' + r.how + ')' : ''}`)); }
         const nph = (i.photos||[]).length + (i.ellePhotos||[]).length;
         if (nph) L.push(`  - Photos jointes : ${nph} (non incluses dans ce fichier)`);
       });

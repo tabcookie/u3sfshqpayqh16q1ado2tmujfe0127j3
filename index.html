@@ -66,6 +66,7 @@ textarea,input[type=text],input[type=time]{width:100%;background:var(--bg);borde
 .sheet{background:var(--surface);width:100%;max-width:520px;max-height:94%;border-radius:22px 22px 0 0;border-top:1px solid var(--border);display:flex;flex-direction:column}
 .overlay.page{align-items:stretch;background:var(--bg)}
 .sheet.full{max-height:none;height:100%;border-radius:0;border:none;padding-top:var(--safe-t)}
+.sheet.full .body{flex:1}
 .foldbtn{width:100%;display:flex;justify-content:space-between;align-items:center;background:none;border:none;color:var(--text);font-size:15px;font-weight:700;padding:4px 0;min-height:36px}
 .sheet .head{padding:10px 18px 8px;border-bottom:1px solid var(--border)}
 .sheet .grab{width:40px;height:5px;border-radius:3px;background:#44444D;margin:0 auto 10px}
@@ -105,6 +106,11 @@ textarea,input[type=text],input[type=time]{width:100%;background:var(--bg);borde
 .pad button.blank{background:transparent}
 .toast{position:fixed;left:50%;bottom:calc(var(--safe-b) + 90px);transform:translateX(-50%);background:#2F2F37;color:var(--text);padding:10px 16px;border-radius:12px;font-size:14px;z-index:40}
 .bilan-text{font-size:15px;line-height:1.5}
+.steps{display:flex;gap:6px;margin-top:10px}
+.steps button{flex:1;height:6px;border-radius:3px;border:none;background:var(--border);padding:0}
+.steps button.done{background:#3D4F70}
+.steps button.on{background:var(--accent)}
+h2.steptitle{font-size:20px;margin:16px 0 0}
 small.hint{display:block;color:var(--muted);font-size:12px;margin-top:6px;line-height:1.4}
 </style>
 </head>
@@ -128,8 +134,9 @@ const COLORS = {
 const ORDER = ['w','g','o','r','k'];
 const RANK = {w:0,g:1,o:2,r:3,k:4};
 
-const DEFAULT_FEEL = ['Bien','Pas bien','Pas bien du tout','Seul','Pas écouté','Colère','Triste','Épuisé','Soulagé'];
-const DEFAULT_ACTS = ['Critique','Mépris','Défensive','Mur','Colère','Insulte','A crié','S\'est excusé(e)','Tendresse'];
+// tuiles vierges au départ : seules les 4 de Gottman sont proposées, le reste c'est lui qui l'ajoute
+const DEFAULT_FEEL = [];
+const DEFAULT_ACTS = ['Critique','Mépris','Défensive','Mur'];
 const CAVALIERS = ['Critique','Mépris','Défensive','Mur'];
 const GRAVE = ['Mépris','Insulte'];
 
@@ -221,7 +228,7 @@ const feelTiles = () => [...DEFAULT_FEEL, ...S.settings.feel];
 const actTiles = () => [...DEFAULT_ACTS, ...S.settings.acts];
 
 async function saveItem(it){ const i = S.items.findIndex(x => x.id === it.id); if (i >= 0) S.items[i] = it; else S.items.push(it); await DB.put('items', it); }
-async function deleteItem(id){ const it = S.items.find(x => x.id === id); if (it && it.photos) for (const p of it.photos) await DB.del('photos', p); S.items = S.items.filter(x => x.id !== id); await DB.del('items', id); }
+async function deleteItem(id){ const it = S.items.find(x => x.id === id); if (it) for (const p of [...(it.photos||[]), ...(it.ellePhotos||[])]) await DB.del('photos', p); S.items = S.items.filter(x => x.id !== id); await DB.del('items', id); }
 async function saveSettings(){ await DB.put('kv', {k:'settings', v:S.settings}); }
 
 async function photoUrl(id){
@@ -345,8 +352,8 @@ function entryLine(e){
   if (e.qui) parts.push(QUI[e.qui]);
   const tags = [...Object.keys(e.elle||{}).map(t => 'Elle : ' + t), ...Object.keys(e.moi||{}).map(t => 'Moi : ' + t)];
   if (e.air) tags.push("J'ai pris l'air");
-  const ph = (e.photos||[]).length;
-  const txt = e.what || (e.feel && e.feel.length ? e.feel.join(', ') : '');
+  const ph = (e.photos||[]).length + (e.ellePhotos||[]).length;
+  const txt = e.what || e.elleNote || (e.feel && e.feel.length ? e.feel.join(', ') : '');
   return `<button class="item" data-entry="${e.id}">
     <span class="dot c-${e.color}" style="margin-top:3px"></span>
     <span style="flex:1;min-width:0">
@@ -383,7 +390,7 @@ function renderLivre(m){
     <div class="pastilles">${ORDER.map(c => `<button class="pbtn c-${c}" data-new="${c}" aria-label="Pastille ${COLORS[c].name.toLowerCase()} : ${COLORS[c].label}"></button>`).join('')}</div>
   </section>
   ${toRepair.map(e => `<div class="banner">
-    <div>${esc(shortDate(e.date))}, moment ${e.color === 'k' ? 'noir' : 'rouge'} à ${esc(e.time)}${e.what ? ' : « ' + esc(e.what.slice(0,60)) + (e.what.length>60?'…':'') + ' »' : ''}. <strong>Ça s'est réparé ?</strong></div>
+    <div>${esc(shortDate(e.date))}, moment ${e.color === 'k' ? 'noir' : 'rouge'} à ${esc(e.time)}${(e.what||e.elleNote) ? ' : « ' + esc((e.what||e.elleNote).slice(0,60)) + ((e.what||e.elleNote).length>60?'…':'') + ' »' : ''}. <strong>Ça s'est réparé ?</strong></div>
     <div class="three">${Object.entries(REPAIR).map(([k,l]) => `<button data-repair="${e.id}" data-v="${k}">${l}</button>`).join('')}</div>
   </div>`).join('')}
   <section class="card" aria-label="Moments">
@@ -445,7 +452,6 @@ function sheet(head, body, foot, isDirty){
 
 /* ---------- ENTRY editor (page de la pastille) ---------- */
 const TITLES = {w:'Journée parfaite', g:'Bon moment', o:'Moment tendu', r:'Moment difficile', k:'Ligne franchie'};
-const ELLE_HINT = "ce qu'elle a fait";
 
 async function saveDraft(d){ try { await DB.put('kv', {k:'draft', v:d}); } catch(_) {} }
 async function clearDraft(){ try { await DB.del('kv', 'draft'); } catch(_) {} }
@@ -453,17 +459,17 @@ async function clearDraft(){ try { await DB.del('kv', 'draft'); } catch(_) {} }
 function openEntry(id, color, draft){
   const isNew = draft ? draft.isNew : !id;
   const e = draft ? draft.e
-    : isNew ? {id:uid(), type:'e', date:S.day, time: S.day === todayStr() ? nowTime() : '12:00', ts:Date.now(), color, qui:'', what:'', need:'', feel:[], moi:{}, elle:{}, air:false, photos:[], repair:null}
+    : isNew ? {id:uid(), type:'e', date:S.day, time: S.day === todayStr() ? nowTime() : '12:00', ts:Date.now(), color, qui:'', what:'', need:'', feel:[], moi:{}, elle:{}, elleFeel:[], elleNote:'', ellePhotos:[], air:false, photos:[], repair:null}
             : JSON.parse(JSON.stringify(S.items.find(x => x.id === id)));
+  // compatibilité avec les anciens moments
   e.moi = e.moi || {}; e.elle = e.elle || {}; e.feel = e.feel || []; e.photos = e.photos || [];
+  e.elleFeel = e.elleFeel || []; e.elleNote = e.elleNote || ''; e.ellePhotos = e.ellePhotos || [];
+  e.what = e.what || ''; e.need = e.need || '';
   let suggestionDismissed = draft ? !!draft.sug : false;
   const removedPhotos = draft ? (draft.removed || []) : [];
-  const newPhotos = draft ? (draft.newPhotos || []) : [];
+  const newPhotos = draft ? (draft.newPhotos || []).map(p => ({side:'moi', ...p})) : [];
   const original = draft ? draft.original : JSON.stringify(e);
-  const open = draft ? (draft.open || {}) : {
-    moiActs: Object.keys(e.moi).length > 0 || e.air,
-    raconter: !!(e.what || e.need || e.photos.length)
-  };
+  let step = draft && typeof draft.step === 'number' ? draft.step : 0;
 
   const ov = document.createElement('div');
   ov.className = 'overlay page';
@@ -473,92 +479,128 @@ function openEntry(id, color, draft){
 
   const isDirty = () => { syncText(); return JSON.stringify(e) !== original || newPhotos.length > 0 || removedPhotos.length > 0; };
   let draftTimer = null;
-  const persist = () => { clearTimeout(draftTimer); draftTimer = setTimeout(() => { if (document.body.contains(ov)) saveDraft({isNew, e, original, sug:suggestionDismissed, removed:removedPhotos, newPhotos:newPhotos.map(p => ({id:p.id, blob:p.blob})), open}); }, 300); };
+  const persist = () => { clearTimeout(draftTimer); draftTimer = setTimeout(() => { if (document.body.contains(ov)) saveDraft({isNew, e, original, sug:suggestionDismissed, removed:removedPhotos, newPhotos:newPhotos.map(p => ({id:p.id, blob:p.blob, side:p.side})), step}); }, 300); };
   const close = async () => { clearTimeout(draftTimer); await clearDraft(); ov.remove(); };
   ov.tryClose = async () => { if (!isDirty() || confirm("Fermer sans enregistrer ? Ce que tu viens d'écrire sera perdu.")) await close(); };
 
+  // un écran par choix : Qui ? puis la personne choisie, puis l'autre
+  const steps = () => { const o = e.qui === 'moi' ? ['moi','elle'] : ['elle','moi']; return ['qui', ...o.flatMap(s => [s+'Act', s+'Feel', s+'Note'])]; };
+  const STEP_TITLE = {qui:'Qui ?', elleAct:"Elle · ce qu'elle a fait", elleFeel:'Elle · comment elle se sent', elleNote:'Elle · note', moiAct:"Moi · ce que j'ai fait", moiFeel:'Moi · comment je me sens', moiNote:'Moi · note'};
+  const feelKey = side => side === 'elle' ? 'elleFeel' : 'feel';
+  const photoKey = side => side === 'elle' ? 'ellePhotos' : 'photos';
+  const withSelected = (list, sel) => [...list, ...sel.filter(t => !list.includes(t))];
+
   function actChips(side){
     const sel = e[side];
-    return `<div class="chips">${actTiles().map(t => `<button class="chip ${t in sel ? 'on' : ''}" data-side="${side}" data-tile="${esc(t)}" aria-pressed="${t in sel}">${esc(t)}</button>`).join('')}
+    return `<div class="chips">${withSelected(actTiles(), Object.keys(sel)).map(t => `<button class="chip ${t in sel ? 'on' : ''}" data-side="${side}" data-tile="${esc(t)}" aria-pressed="${t in sel}">${esc(t)}</button>`).join('')}
       <button class="chip add" data-addact="${side}">+ Ma tuile</button></div>
       ${Object.keys(sel).length ? `<div class="annot">${Object.keys(sel).map(t => `<div class="a"><span>${esc(t)}</span><input type="text" data-annot="${side}" data-tile="${esc(t)}" value="${esc(sel[t])}" placeholder="Petite précision…"></div>`).join('')}</div>` : ''}`;
   }
-  function fold(key, title, inner){
-    return `<div class="side"><button class="foldbtn" data-fold="${key}" aria-expanded="${!!open[key]}"><span>${title}</span><span aria-hidden="true">${open[key] ? '▾' : '▸'}</span></button>${open[key] ? `<div style="margin-top:10px">${inner}</div>` : ''}</div>`;
+  function feelChips(side){
+    const sel = e[feelKey(side)];
+    return `<div class="chips">${withSelected(feelTiles(), sel).map(t => `<button class="chip ${sel.includes(t) ? 'on' : ''}" data-feel="${side}" data-tile="${esc(t)}" aria-pressed="${sel.includes(t)}">${esc(t)}</button>`).join('')}
+      <button class="chip add" data-addfeel="${side}">+ Ma tuile</button></div>`;
+  }
+  function photosBlock(side){
+    const k = photoKey(side);
+    return `<div class="q">Photos</div>
+      <div class="photos">${e[k].map(p => `<div class="ph"><img data-photo="${p}" alt="Photo jointe"><button data-rmph="${p}" data-pside="${side}" aria-label="Retirer la photo">×</button></div>`).join('')}
+        ${newPhotos.filter(p => p.side === side).map(p => `<div class="ph"><img src="${p.url || (p.url = URL.createObjectURL(p.blob))}" alt="Photo jointe"><button data-rmnew="${p.id}" aria-label="Retirer la photo">×</button></div>`).join('')}
+        <button class="ph" data-addph="${side}" style="border:1px dashed var(--dim);color:var(--muted);font-size:28px" aria-label="Joindre une photo">+</button></div>`;
   }
   function needsSuggestion(){
     if (suggestionDismissed || RANK[e.color] >= RANK.r) return false;
     return GRAVE.some(g => g in e.elle || g in e.moi);
   }
+  function stepHasContent(k){
+    if (k === 'qui') return !!e.qui;
+    const side = k.startsWith('elle') ? 'elle' : 'moi';
+    if (k.endsWith('Act')) return Object.keys(e[side]).length > 0 || (side === 'moi' && e.air);
+    if (k.endsWith('Feel')) return e[feelKey(side)].length > 0;
+    return side === 'elle' ? !!(e.elleNote || e.ellePhotos.length || newPhotos.some(p => p.side === 'elle'))
+                           : !!(e.what || e.need || e.photos.length || newPhotos.some(p => p.side === 'moi'));
+  }
+  function body(k){
+    if (k === 'qui') return `<div class="sub" style="margin:14px 0 4px">Qui est en cause ?</div>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:10px">${Object.entries(QUI).map(([q,l]) => `<button class="btn block" data-qui="${q}" style="height:60px;font-size:18px;${e.qui===q ? 'border-color:var(--accent);background:var(--accent-bg);font-weight:700' : ''}" aria-pressed="${e.qui===q}">${l}</button>`).join('')}</div>
+      <small class="hint" style="margin-top:12px">On passera ensuite par Elle et par Moi : sur chaque écran tu choisis, ou tu passes s'il n'y a rien.</small>`;
+    const side = k.startsWith('elle') ? 'elle' : 'moi';
+    if (k.endsWith('Act')) return `
+      ${needsSuggestion() ? `<div class="banner warn"><strong>${esc(GRAVE.find(g => g in e.elle || g in e.moi))}, c'est sérieux.</strong> Ce serait plutôt une pastille rouge ? C'est toi qui choisis.
+        <div class="three"><button id="sugRed" style="border:none;background:var(--r);color:#1A0B0B;font-weight:700">Passer en rouge</button><button id="sugKeep" style="border-color:#6B4A1A">Garder</button></div></div>` : ''}
+      <div style="margin-top:14px">${actChips(side)}</div>
+      ${side === 'moi' ? `<div class="chips" style="margin-top:10px"><button class="chip ${e.air ? 'on' : ''}" id="air" aria-pressed="${e.air}">J'ai pris l'air</button></div>` : ''}`;
+    if (k.endsWith('Feel')) return `<div style="margin-top:14px">${feelChips(side)}</div>`;
+    if (side === 'elle') return `
+      <label class="q" for="enote">Note sur elle</label>
+      <textarea id="enote" rows="5" placeholder="Ce qu'elle a dit, fait… (facultatif)">${esc(e.elleNote)}</textarea>
+      ${photosBlock('elle')}`;
+    return `
+      <label class="q" for="ewhat">Ma note</label>
+      <textarea id="ewhat" rows="4" placeholder="Qu'est-ce qui s'est passé pour moi ? (facultatif)">${esc(e.what)}</textarea>
+      <label class="q" for="eneed">De quoi j'aurais eu besoin ?</label>
+      <textarea id="eneed" rows="2" placeholder="Facultatif">${esc(e.need)}</textarea>
+      ${photosBlock('moi')}`;
+  }
   function draw(){
-    const keepScroll = bodyEl.scrollTop;
+    const st = steps(); if (step >= st.length) step = st.length - 1;
+    const k = st[step], last = step === st.length - 1;
     headEl.innerHTML = `<div class="row">
-      <button class="iconbtn" data-close aria-label="Retour">${ICON.left}</button>
+      <button class="iconbtn" data-close aria-label="Fermer">${ICON.left}</button>
       <span class="dot c-${e.color}" style="width:26px;height:26px;border-radius:13px"></span>
       <div style="flex:1;min-width:0"><div style="font-size:18px;font-weight:700">${TITLES[e.color]}</div>
         <div class="sub row" style="gap:6px">${esc(shortDate(e.date))} · <input type="time" id="etime" value="${esc(e.time)}" aria-label="Heure" style="width:auto;padding:2px 6px;font-size:13px;border-radius:6px"></div></div>
-    </div>`;
-    bodyEl.innerHTML = `
-      ${needsSuggestion() ? `<div class="banner warn"><strong>${esc(GRAVE.find(g => g in e.elle || g in e.moi))}, c'est sérieux.</strong> Ce serait plutôt une pastille rouge ? C'est toi qui choisis.
-        <div class="three"><button id="sugRed" style="border:none;background:var(--r);color:#1A0B0B;font-weight:700">Passer en rouge</button><button id="sugKeep" style="border-color:#6B4A1A">Garder</button></div></div>` : ''}
-      <div class="side"><h3>Elle <span class="sub" style="font-weight:400">· ${ELLE_HINT}</span></h3>${actChips('elle')}</div>
-      <div class="side"><h3>Moi <span class="sub" style="font-weight:400">· comment je me sens</span></h3>
-        <div class="chips">${feelTiles().map(t => `<button class="chip ${e.feel.includes(t) ? 'on' : ''}" data-feel="${esc(t)}" aria-pressed="${e.feel.includes(t)}">${esc(t)}</button>`).join('')}
-        <button class="chip add" id="addfeel">+ Ma tuile</button></div></div>
-      ${fold('moiActs', "Et moi, ce que j'ai fait", `${actChips('moi')}<div class="chips" style="margin-top:10px"><button class="chip ${e.air ? 'on' : ''}" id="air" aria-pressed="${e.air}">J'ai pris l'air</button></div>`)}
-      ${fold('raconter', 'Raconter', `
-        <label class="q" for="ewhat" style="margin-top:0">Qu'est-ce qui s'est passé ?</label>
-        <textarea id="ewhat" rows="3" placeholder="Facultatif">${esc(e.what)}</textarea>
-        <label class="q" for="eneed">De quoi tu aurais eu besoin ?</label>
-        <textarea id="eneed" rows="2" placeholder="Facultatif">${esc(e.need)}</textarea>
-        <div class="q">Photos</div>
-        <div class="photos">${e.photos.map(p => `<div class="ph"><img data-photo="${p}" alt="Photo jointe"><button data-rmph="${p}" aria-label="Retirer la photo">×</button></div>`).join('')}
-          ${newPhotos.map(p => `<div class="ph"><img src="${p.url || (p.url = URL.createObjectURL(p.blob))}" alt="Photo jointe"><button data-rmnew="${p.id}" aria-label="Retirer la photo">×</button></div>`).join('')}
-          <button class="ph" id="addph" style="border:1px dashed var(--dim);color:var(--muted);font-size:28px" aria-label="Joindre une photo">+</button></div>`)}
-      <div class="q">Qui ? <span class="sub" style="font-weight:400">(facultatif)</span></div>
-      <div class="three" style="margin-top:0">${Object.entries(QUI).map(([k,l]) => `<button data-qui="${k}" style="${e.qui===k ? 'border-color:var(--accent);background:var(--accent-bg);font-weight:600' : 'border-color:var(--border)'}" aria-pressed="${e.qui===k}">${l}</button>`).join('')}</div>
-      ${!isNew ? `<div class="q">Changer la couleur</div><div class="pastilles">${ORDER.map(c => `<button class="pbtn c-${c}" data-recolor="${c}" style="width:44px;height:44px;${c===e.color ? 'outline:3px solid var(--accent);outline-offset:3px' : ''}" aria-label="Passer en ${COLORS[c].name.toLowerCase()}"></button>`).join('')}</div>` : ''}
-      ${!isNew && (e.color === 'r' || e.color === 'k') ? `<div class="q">Ça s'est réparé ?</div><div class="three" style="margin-top:0">${Object.entries(REPAIR).map(([k,l]) => `<button data-rep="${k}" style="${e.repair===k ? 'border-color:var(--accent);background:var(--accent-bg);font-weight:600' : 'border-color:var(--border)'}">${l}</button>`).join('')}</div>` : ''}
+    </div>
+    <div class="steps" role="tablist" aria-label="Étapes">${st.map((s,i) => `<button data-goto="${i}" class="${i===step ? 'on' : ''} ${stepHasContent(s) ? 'done' : ''}" aria-label="Étape ${i+1} : ${esc(STEP_TITLE[s])}" ${i===step ? 'aria-current="step"' : ''}></button>`).join('')}</div>`;
+    bodyEl.innerHTML = `<h2 class="steptitle">${esc(STEP_TITLE[k])}</h2>${body(k)}
+      ${last && !isNew ? `<div class="q">Changer la couleur</div><div class="pastilles">${ORDER.map(c => `<button class="pbtn c-${c}" data-recolor="${c}" style="width:44px;height:44px;${c===e.color ? 'outline:3px solid var(--accent);outline-offset:3px' : ''}" aria-label="Passer en ${COLORS[c].name.toLowerCase()}"></button>`).join('')}</div>` : ''}
+      ${last && !isNew && (e.color === 'r' || e.color === 'k') ? `<div class="q">Ça s'est réparé ?</div><div class="three" style="margin-top:0">${Object.entries(REPAIR).map(([r,l]) => `<button data-rep="${r}" style="${e.repair===r ? 'border-color:var(--accent);background:var(--accent-bg);font-weight:600' : 'border-color:var(--border)'}">${l}</button>`).join('')}</div>` : ''}
+      ${last && !isNew ? `<button class="btn danger block" id="edel" style="margin-top:20px">Supprimer ce moment</button>` : ''}
       <div style="height:20px"></div>`;
-    footEl.innerHTML = `${!isNew ? '<button class="btn danger" id="edel">Supprimer</button>' : ''}<button class="btn primary" id="eok" style="flex:1">Valider</button>`;
-    bodyEl.scrollTop = keepScroll;
+    footEl.innerHTML = `${step > 0 ? `<button class="btn" id="eprev" aria-label="Écran précédent">‹ Retour</button>` : ''}
+      ${last ? `<button class="btn primary" id="eok" style="flex:1">Valider</button>`
+             : `<button class="btn ${stepHasContent(k) ? 'primary' : ''}" id="enext" style="flex:1">${stepHasContent(k) ? 'Suivant ›' : 'Passer ›'}</button>`}`;
+    bodyEl.scrollTop = 0;
     fillPhotos(bodyEl);
     bind();
     persist();
   }
+  function redraw(){ const s = bodyEl.scrollTop; draw(); bodyEl.scrollTop = s; }
   function syncText(){
-    const w = ov.querySelector('#ewhat'), n = ov.querySelector('#eneed'), tm = ov.querySelector('#etime');
-    if (w) e.what = w.value; if (n) e.need = n.value; if (tm && tm.value) e.time = tm.value;
+    const w = ov.querySelector('#ewhat'), n = ov.querySelector('#eneed'), en = ov.querySelector('#enote'), tm = ov.querySelector('#etime');
+    if (w) e.what = w.value; if (n) e.need = n.value; if (en) e.elleNote = en.value; if (tm && tm.value) e.time = tm.value;
     ov.querySelectorAll('[data-annot]').forEach(i => { e[i.dataset.annot][i.dataset.tile] = i.value; });
   }
   function bind(){
     ov.querySelectorAll('[data-close]').forEach(b => b.onclick = () => ov.tryClose());
     ov.querySelectorAll('textarea, input').forEach(i => i.addEventListener('input', () => { syncText(); persist(); }));
-    ov.querySelectorAll('[data-fold]').forEach(b => b.onclick = () => { syncText(); open[b.dataset.fold] = !open[b.dataset.fold]; draw(); });
-    ov.querySelectorAll('[data-feel]').forEach(b => b.onclick = () => { syncText(); const t = b.dataset.feel; e.feel = e.feel.includes(t) ? e.feel.filter(x => x !== t) : [...e.feel, t]; draw(); });
-    ov.querySelectorAll('[data-qui]').forEach(b => b.onclick = () => { syncText(); e.qui = e.qui === b.dataset.qui ? '' : b.dataset.qui; draw(); });
-    ov.querySelectorAll('[data-side]').forEach(b => b.onclick = () => { syncText(); const s = e[b.dataset.side], t = b.dataset.tile; if (t in s) delete s[t]; else s[t] = ''; draw(); });
-    ov.querySelectorAll('[data-addact]').forEach(b => b.onclick = async () => { syncText(); const v = (prompt('Nom de ta tuile (pour Elle et Moi) :') || '').trim(); if (v && !actTiles().includes(v)) { S.settings.acts.push(v); await saveSettings(); } if (v) e[b.dataset.addact][v] = e[b.dataset.addact][v] || ''; draw(); });
-    const af = ov.querySelector('#addfeel'); if (af) af.onclick = async () => { syncText(); const v = (prompt('Nom de ta tuile (ressenti) :') || '').trim(); if (v && !feelTiles().includes(v)) { S.settings.feel.push(v); await saveSettings(); } if (v && !e.feel.includes(v)) e.feel.push(v); draw(); };
-    const air = ov.querySelector('#air'); if (air) air.onclick = () => { syncText(); e.air = !e.air; draw(); };
-    const sr = ov.querySelector('#sugRed'); if (sr) sr.onclick = () => { syncText(); e.color = 'r'; draw(); };
-    const sk = ov.querySelector('#sugKeep'); if (sk) sk.onclick = () => { syncText(); suggestionDismissed = true; draw(); };
-    ov.querySelectorAll('[data-recolor]').forEach(b => b.onclick = () => { syncText(); e.color = b.dataset.recolor; suggestionDismissed = false; draw(); });
-    ov.querySelectorAll('[data-rep]').forEach(b => b.onclick = () => { syncText(); e.repair = e.repair === b.dataset.rep ? null : b.dataset.rep; draw(); });
-    ov.querySelectorAll('[data-rmph]').forEach(b => b.onclick = () => { syncText(); removedPhotos.push(b.dataset.rmph); e.photos = e.photos.filter(p => p !== b.dataset.rmph); draw(); });
-    ov.querySelectorAll('[data-rmnew]').forEach(b => b.onclick = () => { syncText(); const i = newPhotos.findIndex(p => p.id === b.dataset.rmnew); newPhotos.splice(i,1); draw(); });
-    const ap = ov.querySelector('#addph'); if (ap) ap.onclick = () => {
+    ov.querySelectorAll('[data-goto]').forEach(b => b.onclick = () => { syncText(); step = +b.dataset.goto; draw(); });
+    const nx = ov.querySelector('#enext'); if (nx) nx.onclick = () => { syncText(); step++; draw(); };
+    const pv = ov.querySelector('#eprev'); if (pv) pv.onclick = () => { syncText(); step--; draw(); };
+    ov.querySelectorAll('[data-qui]').forEach(b => b.onclick = () => { syncText(); e.qui = b.dataset.qui; step = 1; draw(); });
+    ov.querySelectorAll('[data-feel]').forEach(b => b.onclick = () => { syncText(); const k = feelKey(b.dataset.feel), t = b.dataset.tile; e[k] = e[k].includes(t) ? e[k].filter(x => x !== t) : [...e[k], t]; redraw(); });
+    ov.querySelectorAll('[data-side]').forEach(b => b.onclick = () => { syncText(); const s = e[b.dataset.side], t = b.dataset.tile; if (t in s) delete s[t]; else s[t] = ''; redraw(); });
+    ov.querySelectorAll('[data-addact]').forEach(b => b.onclick = async () => { syncText(); const v = (prompt('Nom de ta tuile (pour Elle et Moi) :') || '').trim(); if (v && !actTiles().includes(v)) { S.settings.acts.push(v); await saveSettings(); } if (v) e[b.dataset.addact][v] = e[b.dataset.addact][v] || ''; redraw(); });
+    ov.querySelectorAll('[data-addfeel]').forEach(b => b.onclick = async () => { syncText(); const v = (prompt('Nom de ta tuile (ressenti) :') || '').trim(); if (v && !feelTiles().includes(v)) { S.settings.feel.push(v); await saveSettings(); } const k = feelKey(b.dataset.addfeel); if (v && !e[k].includes(v)) e[k].push(v); redraw(); });
+    const air = ov.querySelector('#air'); if (air) air.onclick = () => { syncText(); e.air = !e.air; redraw(); };
+    const sr = ov.querySelector('#sugRed'); if (sr) sr.onclick = () => { syncText(); e.color = 'r'; redraw(); };
+    const sk = ov.querySelector('#sugKeep'); if (sk) sk.onclick = () => { syncText(); suggestionDismissed = true; redraw(); };
+    ov.querySelectorAll('[data-recolor]').forEach(b => b.onclick = () => { syncText(); e.color = b.dataset.recolor; suggestionDismissed = false; redraw(); });
+    ov.querySelectorAll('[data-rep]').forEach(b => b.onclick = () => { syncText(); e.repair = e.repair === b.dataset.rep ? null : b.dataset.rep; redraw(); });
+    ov.querySelectorAll('[data-rmph]').forEach(b => b.onclick = () => { syncText(); const k = photoKey(b.dataset.pside); removedPhotos.push(b.dataset.rmph); e[k] = e[k].filter(p => p !== b.dataset.rmph); redraw(); });
+    ov.querySelectorAll('[data-rmnew]').forEach(b => b.onclick = () => { syncText(); const i = newPhotos.findIndex(p => p.id === b.dataset.rmnew); newPhotos.splice(i,1); redraw(); });
+    ov.querySelectorAll('[data-addph]').forEach(ap => ap.onclick = () => {
       syncText();
-      const inp = $('#photoInput'); inp.value = '';
-      inp.onchange = async () => { for (const f of inp.files) newPhotos.push({id:uid(), blob: await shrink(f)}); draw(); };
+      const side = ap.dataset.addph, inp = $('#photoInput'); inp.value = '';
+      inp.onchange = async () => { for (const f of inp.files) newPhotos.push({id:uid(), side, blob: await shrink(f)}); redraw(); };
       inp.click();
-    };
-    ov.querySelector('#eok').onclick = async () => {
+    });
+    const ok = ov.querySelector('#eok'); if (ok) ok.onclick = async () => {
       syncText();
       Object.keys(e.elle).forEach(k => e.elle[k] = (e.elle[k]||'').trim());
       Object.keys(e.moi).forEach(k => e.moi[k] = (e.moi[k]||'').trim());
-      e.what = e.what.trim(); e.need = e.need.trim();
-      for (const p of newPhotos) { await DB.put('photos', {id:p.id, blob:p.blob}); e.photos.push(p.id); }
+      e.what = e.what.trim(); e.need = e.need.trim(); e.elleNote = e.elleNote.trim();
+      for (const p of newPhotos) { await DB.put('photos', {id:p.id, blob:p.blob}); e[photoKey(p.side)].push(p.id); }
       for (const p of removedPhotos) await DB.del('photos', p);
       await saveItem(e);
       await close(); toast('Moment enregistré'); render();
@@ -598,9 +640,11 @@ function renderNoires(m){
     return `<button class="card item" data-entry="${e.id}" style="display:block;border:1px solid var(--border);border-radius:16px;padding:14px">
       <span class="between"><span class="row"><span class="dot c-k" style="width:14px;height:14px"></span><span class="meta">${esc(shortDate(e.date))} · ${esc(e.time)}${e.qui ? ' · ' + esc(QUI[e.qui]) : ''}</span></span>
       <span style="font-size:12px;font-weight:600;color:${e.repair ? repCol[e.repair] : 'var(--muted)'}">${e.repair ? 'Réparé : ' + esc(REPAIR[e.repair]) : 'Réparation ?'}</span></span>
-      <span class="txt" style="display:block;margin-top:8px">${e.what ? esc(e.what) : '<span class="empty">Pas de texte</span>'}</span>
+      ${e.elleNote ? `<span class="txt" style="display:block;margin-top:8px"><span class="sub">Elle : </span>${esc(e.elleNote)}</span>` : ''}
+      ${e.what ? `<span class="txt" style="display:block;margin-top:8px"><span class="sub">Moi : </span>${esc(e.what)}</span>` : ''}
+      ${!e.what && !e.elleNote ? '<span class="txt empty" style="display:block;margin-top:8px">Pas de texte</span>' : ''}
       ${tags.length ? `<span class="meta" style="display:block;margin-top:8px">${esc(tags.join(' · '))}</span>` : ''}
-      ${(e.photos||[]).length ? `<span class="meta" style="display:block;margin-top:4px">${e.photos.length} photo(s)</span>` : ''}
+      ${(e.photos||[]).length + (e.ellePhotos||[]).length ? `<span class="meta" style="display:block;margin-top:4px">${(e.photos||[]).length + (e.ellePhotos||[]).length} photo(s)</span>` : ''}
     </button>`; }).join('') : `<div class="card empty">Aucune noire pour l'instant.</div>`}`;
   m.querySelectorAll('[data-entry]').forEach(b => b.onclick = () => { const e = S.items.find(x => x.id === b.dataset.entry); S.day = e.date; openEntry(e.id); });
 }
@@ -784,15 +828,18 @@ function periodText(from, to, label){
       items.forEach(i => {
         if (i.type === 'n') { L.push(`- ${i.time} · Note : ${i.text}`); return; }
         L.push(`- ${i.time} ${sym[i.color]} ${COLORS[i.color].name}${i.qui ? ' · Qui : ' + QUI[i.qui] : ''}`);
-        if (i.what) L.push(`  - Ce qui s'est passé : ${i.what}`);
-        if (i.feel && i.feel.length) L.push(`  - Ressenti : ${i.feel.join(', ')}`);
         const fmt = o => Object.entries(o||{}).map(([k,v]) => v ? `${k} (${v})` : k).join(', ');
-        if (Object.keys(i.elle||{}).length) L.push(`  - Elle : ${fmt(i.elle)}`);
-        if (Object.keys(i.moi||{}).length) L.push(`  - Moi : ${fmt(i.moi)}`);
+        if (Object.keys(i.elle||{}).length) L.push(`  - Elle a fait : ${fmt(i.elle)}`);
+        if (i.elleFeel && i.elleFeel.length) L.push(`  - Elle se sent : ${i.elleFeel.join(', ')}`);
+        if (i.elleNote) L.push(`  - Note sur elle : ${i.elleNote}`);
+        if (Object.keys(i.moi||{}).length) L.push(`  - J'ai fait : ${fmt(i.moi)}`);
+        if (i.feel && i.feel.length) L.push(`  - Je me sens : ${i.feel.join(', ')}`);
+        if (i.what) L.push(`  - Ma note : ${i.what}`);
         if (i.air) L.push(`  - J'ai pris l'air`);
         if (i.need) L.push(`  - Ce dont j'aurais eu besoin : ${i.need}`);
         if (i.repair) L.push(`  - Réparé : ${REPAIR[i.repair]}`);
-        if ((i.photos||[]).length) L.push(`  - Photos jointes : ${i.photos.length} (non incluses dans ce fichier)`);
+        const nph = (i.photos||[]).length + (i.ellePhotos||[]).length;
+        if (nph) L.push(`  - Photos jointes : ${nph} (non incluses dans ce fichier)`);
       });
     }
     d = addDays(d, 1);

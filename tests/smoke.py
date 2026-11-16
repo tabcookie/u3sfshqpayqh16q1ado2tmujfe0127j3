@@ -31,43 +31,73 @@ with sync_playwright() as p:
         pg.click(f'.pad button[data-k="{k}"]'); pg.wait_for_timeout(150)
     pg.wait_for_selector('[data-new="k"]')
 
-    # 2. pastille noire complète
+    def nxt():
+        pg.click('#enext'); pg.wait_for_timeout(100)
+
+    # 2. pastille noire complète, un écran par choix
     pg.click('[data-new="k"]')
-    pg.click('[data-fold="raconter"]')
-    pg.fill('#ewhat', 'Texte de test')
-    pg.click('[data-feel="Seul"]')
-    pg.click('[data-qui="elle"]')
+    check(pg.is_visible('[data-qui="elle"]'), 'premier écran « Qui ? » absent')
+    check(pg.locator('[data-side]').count() == 0, 'les tuiles ne doivent pas être sur l\'écran « Qui ? »')
+    pg.click('[data-qui="elle"]'); pg.wait_for_timeout(100)          # avance tout seul
+    check(pg.inner_text('.steptitle').startswith('Elle'), 'après « Elle », on doit arriver sur la partie Elle')
+    check(pg.locator('[data-side="elle"]').count() == 4, 'tuiles de départ : seulement les 4 (Critique, Mépris, Défensive, Mur)')
+    check(pg.inner_text('#enext').startswith('Passer'), 'bouton « Passer » absent quand rien n\'est choisi')
     pg.click('[data-side="elle"][data-tile="Mépris"]')
     pg.fill('[data-annot="elle"][data-tile="Mépris"]', 'annotation test')
-    pg.click('[data-fold="moiActs"]')
-    pg.click('[data-addact="moi"]')            # crée la tuile « Tuile test »
+    check(pg.inner_text('#enext').startswith('Suivant'), 'bouton « Suivant » absent après un choix')
+    nxt()                                                                # Elle se sent
+    check(pg.locator('[data-feel="elle"]:not(.add)').count() == 0, 'ressentis : doivent être vierges au départ')
+    pg.click('[data-addfeel="elle"]')                                    # crée « Tuile test »
+    nxt()                                                                # Elle note
+    pg.fill('#enote', 'Note sur elle test')
+    nxt()                                                                # Moi a fait
+    check(pg.inner_text('.steptitle').startswith('Moi'), 'après Elle, on doit passer à Moi')
+    nxt()                                                                # Moi se sent
+    pg.click('[data-feel="moi"][data-tile="Tuile test"]')
+    nxt()                                                                # Moi note
+    pg.fill('#ewhat', 'Texte de test')
     pg.click('#eok'); pg.wait_for_timeout(300)
     check(pg.locator('[data-entry]').count() == 1, 'pastille noire non enregistrée')
 
+    # 2b. « Moi » d'abord : l'ordre s'inverse
+    pg.click('[data-new="g"]'); pg.click('[data-qui="moi"]'); pg.wait_for_timeout(100)
+    check(pg.inner_text('.steptitle').startswith('Moi'), 'après « Moi », on doit commencer par Moi')
+    pg.click('[data-close]'); pg.wait_for_timeout(200)
+
     # 3. garde-fou : Mépris sur une orange
-    pg.click('[data-new="o"]')
+    pg.click('[data-new="o"]'); pg.click('[data-qui="deux"]'); pg.wait_for_timeout(100)
     pg.click('[data-side="elle"][data-tile="Mépris"]')
     check(pg.is_visible('#sugRed'), 'garde-fou « plutôt rouge ? » absent')
-    pg.click('#sugRed'); pg.click('#eok'); pg.wait_for_timeout(300)
+    pg.click('#sugRed')
+    pg.click('[data-goto="6"]'); pg.click('#eok'); pg.wait_for_timeout(300)
 
     # 4. fermer sans valider demande confirmation (accepte => rien d'enregistré)
-    pg.click('[data-new="g"]'); pg.click('[data-fold="raconter"]'); pg.fill('#ewhat', 'test fermeture')
+    pg.click('[data-new="g"]'); pg.click('#enext'); pg.wait_for_timeout(100)
+    pg.click('[data-goto="3"]'); pg.fill('#enote', 'test fermeture')
     pg.click('[data-close]'); pg.wait_for_timeout(200)
     check(pg.locator('[data-entry]').count() == 2, 'fermeture sans valider a enregistré quelque chose')
 
-    # 4b. brouillon : on quitte l'appli en pleine saisie, on revient, tout est là
-    pg.click('[data-new="r"]'); pg.click('[data-fold="raconter"]'); pg.fill('#ewhat', 'brouillon en cours')
-    pg.click('[data-side="elle"][data-tile="Mur"]'); pg.wait_for_timeout(600)
+    # 4b. brouillon : on quitte l'appli en pleine saisie, on revient sur le même écran
+    pg.click('[data-new="r"]'); pg.click('[data-qui="elle"]'); pg.wait_for_timeout(100)
+    pg.click('[data-side="elle"][data-tile="Mur"]'); nxt(); nxt()
+    pg.fill('#enote', 'brouillon en cours'); pg.wait_for_timeout(600)
     pg.reload(); pg.wait_for_timeout(300)
     for k in '1234':
         pg.click(f'.pad button[data-k="{k}"]'); pg.wait_for_timeout(150)
     pg.wait_for_timeout(500)
     check(pg.locator('.overlay.page').count() == 1, 'brouillon non restauré après retour')
+    check(pg.locator('#enote').count() == 1 and pg.input_value('#enote') == 'brouillon en cours', 'brouillon : pas revenu au bon écran ou texte perdu')
+    pg.click('[data-goto="1"]')
     check(pg.locator('[data-side="elle"][data-tile="Mur"].on').count() == 1, 'brouillon : tuile perdue')
-    pg.click('[data-fold="raconter"]') if pg.locator('#ewhat').count() == 0 else None
-    check(pg.input_value('#ewhat') == 'brouillon en cours', 'brouillon : texte perdu')
-    pg.click('#eok'); pg.wait_for_timeout(300)
+    pg.click('[data-goto="6"]'); pg.click('#eok'); pg.wait_for_timeout(300)
     check(pg.locator('[data-entry]').count() == 3, 'brouillon validé non enregistré')
+
+    # 4c. un ancien moment (avant v1.4) s'ouvre sans erreur et garde ses tuiles
+    pg.evaluate("""async () => { await saveItem({id:'old1', type:'e', date:todayStr(), time:'08:00', ts:1, color:'r', qui:'', what:'ancien', need:'', feel:['Seul'], moi:{}, elle:{'Insulte':''}, air:false, photos:[], repair:null}); render(); }""")
+    pg.wait_for_timeout(200)
+    pg.click('[data-entry="old1"]'); pg.click('[data-goto="1"]')
+    check(pg.locator('[data-side="elle"][data-tile="Insulte"].on').count() == 1, 'ancien moment : tuile disparue')
+    pg.click('[data-goto="6"]'); pg.click('#eok'); pg.wait_for_timeout(300)
 
     # 5. note
     pg.fill('#newnote', 'Note de test'); pg.click('#addnote'); pg.wait_for_timeout(200)
@@ -80,7 +110,7 @@ with sync_playwright() as p:
     check(pg.locator('svg[role="img"]').count() == 1, 'graphique en colonnes absent')
     pg.click('[data-tab="bilans"]'); pg.wait_for_timeout(200)
     txt = pg.evaluate("periodText(mondayOf(todayStr()), addDays(mondayOf(todayStr()),6), 'test')")
-    check('Elle : Mépris (annotation test)' in txt, 'export bilan incomplet')
+    check('Elle a fait : Mépris (annotation test)' in txt and 'Note sur elle : Note sur elle test' in txt and 'Elle se sent : Tuile test' in txt, 'export bilan incomplet')
 
     # 7. changement de code (demande l'ancien)
     pg.click('[data-tab="livre"]'); pg.click('#settings'); pg.wait_for_timeout(200)

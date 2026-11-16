@@ -1,5 +1,12 @@
 # Journal des versions
 
+## v1.4 — 16 nov. 2026
+- La pastille se remplit écran par écran : Qui ? → Elle (ce qu'elle a fait, comment elle se sent, note) → Moi (pareil), ou Moi d'abord si on choisit « Moi ». « Passer » quand il n'y a rien.
+- Nouveau : comment elle se sent, note sur elle et ses propres photos.
+- Tuiles vierges au départ, sauf Critique · Mépris · Défensive · Mur.
+- Barre d'étapes en haut pour revenir sur un écran ; le brouillon rouvre sur le bon écran.
+- Les anciens moments restent intacts.
+
 ## v1.3 — 16 nov. 2026
 - La pastille s'ouvre en page plein écran, réorganisée : Elle (ce qu'elle a fait) · Moi (comment je me sens) · « Et moi, ce que j'ai fait » (replié) · Raconter (texte, besoin, photos, replié) · Qui ? en bas.
 - Brouillon automatique : si on quitte l'appli en pleine saisie, elle rouvre la pastille là où on en était (après le code).
@@ -21,5 +28,6 @@
 Première version complète : PIN, Livre, pastilles, Noires, Stats, Bilans, Réglages, sauvegarde.
 
 ## À faire plus tard
+- Affiner les tuiles et ajouter des stats liées aux nouvelles tuiles (dont « comment elle se sent »).
 - Icône d'écran d'accueil (PNG) et fonctionnement hors connexion (service worker) au moment de la mise en ligne.
 - Design (plus tard, à sa demande).

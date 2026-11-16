@@ -13,9 +13,9 @@ Journal personnel pour noter les moments d'une relation et y voir clair. Soutien
 ⚪ blanche = journée parfaite · 🟢 bon moment · 🟠 tendu · 🔴 difficile · ⚫ noire = elle est allée trop loin (argument pour la rupture).
 - La noire n'écrase pas les autres couleurs de la journée.
 - Un clic ouvre toujours l'écran de la pastille, il faut « Valider » (on peut valider vide et compléter plus tard).
-- Page de la pastille (plein écran) : Elle · ce qu'elle a fait (tuiles annotées) ; Moi · comment je me sens (tuiles) ; « Et moi, ce que j'ai fait » replié (tuiles annotées + J'ai pris l'air) ; « Raconter » replié (ce qui s'est passé, besoin, photos) ; Qui ? en bas, facultatif.
-- Brouillon automatique : on retrouve la saisie en cours après avoir quitté l'appli.
-- Ancienne description : 3 questions douces facultatives (Qu'est-ce qui s'est passé ? Comment te sens-tu ? De quoi tu aurais eu besoin ?), tuiles de ressenti, « Qui ? Elle / Moi / Les deux », sections « Elle » et « Moi » avec tuiles (Critique, Mépris, Défensive, Mur, Colère…) et une annotation par tuile, « J'ai pris l'air », photos.
+- Page de la pastille (plein écran), un écran par choix : « Qui ? » (Elle / Moi / Les deux) → partie de la personne choisie (« Les deux » : Elle d'abord), puis l'autre. Chaque partie : ce qu'il/elle a fait (tuiles annotées ; « J'ai pris l'air » côté Moi) → comment il/elle se sent (tuiles) → note (texte, photos ; côté Moi aussi « De quoi j'aurais eu besoin ? »). Sur chaque écran : choisir, ou « Passer ». Barre d'étapes en haut pour sauter d'un écran à l'autre. Valider au dernier écran (avec couleur, réparation, suppression pour un moment déjà enregistré).
+- Brouillon automatique : on retrouve la saisie en cours, sur le même écran, après avoir quitté l'appli.
+- Tuiles vierges au départ : seules Critique · Mépris · Défensive · Mur sont proposées ; il ajoute lui-même le reste. Les tuiles d'un ancien moment restent affichées.
 - Il peut créer ses propres tuiles.
 - Garde-fou : Mépris ou Insulte sur une pastille sous le rouge → « Ce serait plutôt une rouge ? » (suggestion seulement).
 - Pastille validée : modifier le contenu, changer la couleur, supprimer.

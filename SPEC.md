@@ -10,12 +10,12 @@ Journal personnel pour noter les moments d'une relation et y voir clair. Soutien
 - Ne jamais changer un point validé sans l'accord du propriétaire.
 
 ## Pastilles
-⚪ blanche = journée parfaite · 🟢 bon moment · 🟠 tendu · 🔴 difficile · ⚫ noire = elle est allée trop loin (argument pour la rupture).
+⚪ blanche = journée parfaite · 🟢 bon moment · 🟠 tendu · 🔴 difficile · ⚫ noire = limite franchie, elle est allée trop loin (argument pour la rupture).
 - La noire n'écrase pas les autres couleurs de la journée.
 - Un clic ouvre toujours l'écran de la pastille, il faut « Valider » (on peut valider vide et compléter plus tard).
 - Page de la pastille (plein écran), un écran par choix : « Qui ? » (Elle / Moi / Les deux) → partie de la personne choisie (« Les deux » : Elle d'abord), puis l'autre. Elle : ce qu'elle a fait (tuiles) → note (texte, photos). Pas d'écran « comment elle se sent » : on ne peut pas savoir à sa place. Moi : ce que j'ai fait (tuiles ; « J'ai pris l'air » en orange seulement) → comment je me sens (tuiles) → note (texte, « De quoi j'aurais eu besoin ? », photos). Sur chaque écran : choisir, ou « Passer ». Barre d'étapes en haut pour sauter d'un écran à l'autre. Valider au dernier écran (avec couleur, réparation, suppression pour un moment déjà enregistré).
-- « Qui ? Elle » : côté Moi, l'écran « Ma réaction » remplace « Ce que j'ai fait » : couleur de la réaction (⚪🟢🟠🔴⚫, indépendante de la pastille) puis tuiles de cette couleur (bulle commentaire, « + Ma tuile »), puis « Comment je me sens », puis note et photos à la fin. « Les deux » garde « Ce que j'ai fait ». Stats : « Elle 🔴 → moi 🟢 : n fois ».
-- Dernier écran sur 🟠🔴⚫ : « Elle s'est rattrapée ? » Oui / Non. Oui → pour chaque tuile côté Elle : ⚪ totalement · 🟢 le gros · 🟠 un peu, + texte « Comment ? ». Non → page dédiée à définir plus tard. Bouton ↺ sur chaque moment du Livre pour l'ajouter après coup.
+- « Qui ? Elle » : côté Moi, l'écran « Ma réaction » remplace « Ce que j'ai fait » : pour chaque tuile cochée chez elle (ou « dans l'ensemble »), couleur de la réaction (⚪🟢🟠🔴⚫, indépendante de la pastille) puis tuiles de cette couleur (bulle commentaire, « + Ma tuile »), puis « Comment je me sens », puis note et photos à la fin. « Les deux » garde « Ce que j'ai fait ». Stats : « Elle 🔴 → moi 🟢 : n fois ».
+- Dernier écran sur 🟠🔴⚫ « Après coup » : Elle s'est rattrapée ? et Excuses ? (Oui · Non · Pas vraiment + commentaire), Tu lui en veux ? 🟢🟠🔴⚫. Bouton ↺ sur chaque moment du Livre pour compléter après coup.
 - Case « Devant [prénom] » sur 🟠🔴⚫ (écran Qui ?), prénom réglé dans Réglages et stocké sur le téléphone seulement ; comptée dans les stats et les bilans.
 - Tuiles d'accusation : 🟠 Mauvaise interprétation · 🔴 Accusation · ⚫ Accusation grave.
 - L'appli sert surtout à gérer le négatif ; le vert et le blanc seront creusés plus tard.
@@ -41,15 +41,15 @@ Onglet entre Stats et Bilans. Noter ce qui est annoncé : Elle / Moi, texte, imp
 - Laisser tomber aussi en touchant l'élément, à tout moment.
 - Historique, Paroles en l'air, filtre Elle / Moi, stats propres (indépendantes des pastilles) ; présent dans les bilans et l'export.
 
-## Noires
-Liste de toutes les noires (date, texte, étiquettes, réparation).
+## Tableau (ancien onglet Noires, nom provisoire)
+Cette semaine / Mois. En haut : ratio bons/mauvais en grand + verdict (≥5 sain, 1–5 fragile, <1 les mauvais dominent) ; message à part s'il y a une limite franchie (jamais compensée). Limites franchies condensées. Calendrier du mois (flèches, toucher un jour ouvre sa page). En bas : les 5 pastilles avec leur nombre ; un tap ouvre la liste depuis le bas.
 
 ## Stats
 - Mois : calendrier coloré, filtre par couleur, toucher un jour ouvre sa page.
 - Résumé : ratio bons/mauvais (⚪=2, 🟢=1 / 🟠=1, 🔴=2) avec repère Gottman 5 pour 1 ; noires comptées à part, jamais compensées ; colonnes colorées par semaine avec chiffres à gauche ; 4 cavaliers Elle/Moi (mépris mis en avant) ; Qui ? ; Réparé ? ; toutes les tuiles comptées une par une (ce qu'elle a fait, comment elle se sent, ce que j'ai fait, comment je me sens).
 
 ## Bilans
-Résumé automatique par semaine et par mois + bouton qui exporte un fichier texte de la période seulement, à envoyer à Claude pour débriefer.
+Résumé automatique par semaine et par mois, en blocs (pastilles + nombre, ratio et verdict, rubriques courtes) + bouton qui exporte un fichier texte de la période seulement, à envoyer à Claude pour débriefer.
 
 ## Rappels
 - « Pense à toi » dans l'appli : 3 jours mauvais de suite ou 2 noires en 7 jours.

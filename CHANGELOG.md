@@ -1,5 +1,13 @@
 # Journal des versions
 
+## v1.11 — 17 nov. 2026
+- Tuiles : ⚫ Elle + « Énervement fort », « Flagellation / victimisation » ; réactions ⚫ + « À bout de nerfs », 🔴 + « Épuisé ». Les tuiles ajoutées restent (faits, ressentis, réactions).
+- « Ma réaction » tuile par tuile : pour chaque chose qu'elle a faite, sa couleur et ses tuiles (toutes les couleurs de pastille). Les réactions v1.10 restent lisibles (« dans l'ensemble »).
+- Dernier écran 🟠🔴⚫ « Après coup » : Elle s'est rattrapée ? / Excuses ? (Oui · Non · Pas vraiment + commentaire), Tu lui en veux ? 🟢🟠🔴⚫. L'ancien rattrapage par tuile reste affiché sur les anciens moments.
+- « Ligne franchie » devient « Limite franchie » partout.
+- Bilans en blocs : pastilles avec nombre, ratio en gros et verdict, rubriques (Chez elle, Chez toi, Mes réactions, Ressenti, Réparé, Après coup, Je vais, Tendance).
+- Onglet « Noires » → « Tableau » : ratio et verdict en grand (Gottman 5 pour 1), limites franchies condensées, calendrier du mois avec flèches, les 5 pastilles avec leur nombre (la liste monte du bas), Cette semaine / Mois.
+
 ## v1.10 — 16 nov. 2026
 - Nouvel onglet « Je vais » (entre Stats et Bilans) : Elle / Moi, texte, importance obligatoire (gris neutre, orange important, rouge urgent), jour (Aujourd'hui, Demain par défaut, Autre date).
 - Le soir à partir de l'heure du rappel (21h00 par défaut), à l'ouverture : « Est-ce qu'elle l'a fait ? » Oui / Non (reporté au lendemain) / Laisser tomber. Bouton « Faire le point » aussi dans l'onglet.

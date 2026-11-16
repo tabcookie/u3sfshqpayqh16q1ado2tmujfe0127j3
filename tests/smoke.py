@@ -73,10 +73,10 @@ with sync_playwright() as p:
     nxt()                                                                # Moi note
     pg.fill('#ewhat', 'Texte de test')
     nxt()                                                                # Elle s'est rattrapée ?
-    check(pg.inner_text('.steptitle').startswith('Elle s'), 'dernier écran « Elle s\'est rattrapée ? » absent')
-    pg.click('[data-rok="oui"]'); pg.wait_for_timeout(100)
-    pg.click('[data-rlvl="g"][data-tile="Mépris"]'); pg.wait_for_timeout(100)
-    pg.fill('[data-rhow="Mépris"]', 'elle a tout rangé')
+    check(pg.inner_text('.steptitle') == 'Après coup', 'dernier écran « Après coup » absent')
+    pg.click('[data-rok="pv"]'); pg.wait_for_timeout(100)
+    pg.fill('[data-rhow2]', 'elle a tout rangé')
+    pg.click('[data-rex="non"]'); pg.click('[data-grudge="r"]'); pg.wait_for_timeout(100)
     pg.click('#eok'); pg.wait_for_timeout(300)
     check(pg.locator('[data-entry]').count() == 1, 'pastille noire non enregistrée')
 
@@ -139,7 +139,7 @@ with sync_playwright() as p:
 
     # 4c-bis. ↺ dans le Livre ouvre directement le rattrapage
     pg.click('[data-ratt="old1"]'); pg.wait_for_timeout(150)
-    check(pg.inner_text('.steptitle').startswith('Elle s'), '↺ n\'ouvre pas l\'écran rattrapage')
+    check(pg.inner_text('.steptitle') == 'Après coup', '↺ n\'ouvre pas l\'écran rattrapage')
     pg.click('[data-rok="non"]'); pg.click('#eok'); pg.wait_for_timeout(300)
     check('Rattrapée : non' in pg.inner_text('main'), 'rattrapage non affiché dans le Livre')
 
@@ -185,7 +185,7 @@ with sync_playwright() as p:
     pg.fill('#bubbleText', 'calme test'); pg.click('#bubbleOk'); pg.wait_for_timeout(100)
     check(pg.locator('.chip.on[data-react][data-tile="Resté calme"]').count() == 1, 'réaction : tuile non allumée')
     pg.locator('[data-goto]').last.click(); pg.click('#eok'); pg.wait_for_timeout(300)
-    check('Ma réaction verte : Resté calme' in pg.inner_text('main'), 'réaction non affichée dans le Livre')
+    check('Ma réaction : verte (Resté calme)' in pg.inner_text('main'), 'réaction non affichée dans le Livre')
     txt0 = pg.evaluate("periodText(todayStr(), todayStr(), 'test')")
     check('Ma réaction : 🟢 Verte — Resté calme (calme test)' in txt0, 'réaction absente de l\'export')
     pg.click('[data-new="r"]'); pg.click('[data-qui="deux"]'); pg.wait_for_timeout(100)
@@ -212,6 +212,27 @@ with sync_playwright() as p:
     check('Je vais (ce qui a été annoncé)' in pg.evaluate("periodText(todayStr(), todayStr(), 'test')"), 'je vais absent de l\'export')
     pg.click('[data-tab="livre"]'); pg.wait_for_timeout(200)
 
+    # 4i. réaction tuile par tuile + tableau
+    pg.click('[data-new="k"]'); pg.click('[data-qui="elle"]'); pg.wait_for_timeout(100)
+    pg.click('.chip[data-side="elle"][data-tile="Énervement fort"]'); pg.click('#bubbleOk')
+    pg.click('.chip[data-side="elle"][data-tile="Mépris"]'); pg.click('#bubbleOk'); pg.wait_for_timeout(100)
+    pg.click('[data-goto="3"]')
+    check(pg.locator('[data-rcol="g"]').count() == 2, 'réaction : une ligne par tuile attendue')
+    pg.click('[data-rcol="k"][data-rt="Mépris"]'); pg.wait_for_timeout(100)
+    check(pg.locator('.chip[data-react="Mépris"][data-tile="À bout de nerfs"]').count() == 1, 'réaction noire : « À bout de nerfs » absent')
+    pg.click('[data-rcol="g"][data-rt="Énervement fort"]'); pg.wait_for_timeout(100)
+    pg.locator('[data-goto]').last.click(); pg.click('#eok'); pg.wait_for_timeout(300)
+    check('Ma réaction à Mépris : noire' in pg.inner_text('main'), 'réaction par tuile non affichée')
+    pg.click('[data-tab="noires"]'); pg.wait_for_timeout(200)
+    check('Tableau' in pg.inner_text('main') and pg.locator('.bignum').count() == 1 and pg.locator('.cal').count() == 1, 'tableau incomplet')
+    pg.click('[data-tcol="k"]'); pg.wait_for_timeout(200)
+    check(pg.locator('[data-open]').count() >= 1, 'tableau : liste des noires vide')
+    pg.click('[data-close]'); pg.click('[data-tb="mois"]'); pg.wait_for_timeout(200)
+    pg.click('[data-tab="bilans"]'); pg.wait_for_timeout(200)
+    check(pg.locator('.pill').count() >= 1 and 'Chez elle' in pg.inner_text('main'), 'bilan en blocs absent')
+    check('ligne franchie' not in pg.inner_text('main').lower(), '« ligne franchie » encore présent')
+    pg.click('[data-tab="livre"]'); pg.wait_for_timeout(200)
+
     # 6. onglets
     for tab in ['noires', 'stats', 'bilans']:
         pg.click(f'[data-tab="{tab}"]'); pg.wait_for_timeout(200)
@@ -220,7 +241,7 @@ with sync_playwright() as p:
     check('Tuile test' in pg.inner_text('#statsBody'), 'stats : une tuile ajoutée n\'est pas comptée')
     pg.click('[data-tab="bilans"]'); pg.wait_for_timeout(200)
     txt = pg.evaluate("periodText(mondayOf(todayStr()), addDays(mondayOf(todayStr()),6), 'test')")
-    check('Elle a fait : Mépris (annotation test)' in txt and 'Note sur elle : Note sur elle test' in txt and 'Je me sens : Tuile test (texte ressenti)' in txt and 'Mépris : Le gros (elle a tout rangé)' in txt, 'export bilan incomplet')
+    check('Elle a fait : Mépris (annotation test)' in txt and 'Note sur elle : Note sur elle test' in txt and 'Je me sens : Tuile test (texte ressenti)' in txt and 'rattrapée : Pas vraiment (elle a tout rangé)' in txt and 'Excuses : Non' in txt and 'Je lui en veux : 🔴 Rouge' in txt, 'export bilan incomplet')
 
     # 7. changement de code (demande l'ancien)
     pg.click('[data-tab="livre"]'); pg.click('#settings'); pg.wait_for_timeout(200)

@@ -45,6 +45,14 @@ h1{font-size:22px;margin:4px 0 4px}
 .item:last-child,.entrywrap:last-child .item{border-bottom:none}
 .entrywrap{position:relative}
 .rattbtn{position:absolute;right:0;top:50%;transform:translateY(-50%);width:44px;height:44px;border-radius:22px;border:1px solid var(--border);background:var(--bg);color:var(--accent);font-size:20px}
+.pills{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;background:var(--bg);border:1px solid var(--border);font-size:13px}
+.pill .dot{width:10px;height:10px}
+.brows{margin-top:10px;border-top:1px solid var(--border)}
+.brow{display:flex;gap:12px;padding:8px 0;border-bottom:1px solid var(--border);font-size:14px;line-height:1.4}
+.brow>span:first-child{flex:none;width:96px;color:var(--muted);font-size:13px}
+.brow:last-child{border-bottom:none}
+.bignum{font-size:52px;font-weight:800;line-height:1}
 .rattpick{display:flex;flex-direction:column;align-items:center;gap:6px;background:none;border:none;color:var(--text);font-size:13px;min-width:64px;padding:4px}
 .item .meta{font-size:13px;color:var(--muted)}
 .item .txt{font-size:15px;margin-top:3px;line-height:1.4;white-space:pre-wrap}
@@ -157,7 +165,7 @@ const TILES = {
       feel:['Stress','Ennui','Flemme','Agacé(e)','Fatigué(e)']},
   r: {acts:['Prise de tête','Accusation','Communication risquée',"Risque d'engueulade",'Critique','Défensive','Mur','A crié','Ton qui monte','Ignoré(e)'],
       feel:['Gros stress','Tendu(e)','Colère','Blessé(e)','Seul(e)','Épuisé(e)']},
-  k: {acts:['Mépris','Accusation grave','Insultes / Humiliation','Phrase de trop','Reproches','Laisser tomber','Menace'], moiActs:['Éloignement urgent'],
+  k: {acts:['Mépris','Accusation grave','Insultes / Humiliation','Phrase de trop','Énervement fort','Flagellation / victimisation','Reproches','Laisser tomber','Menace'], moiActs:['Éloignement urgent'],
       feel:['Stress énorme','Rage','Humilié(e)','Abandonné(e)','Dégoûté(e)','Brisé(e)','Peur']}
 };
 const CAVALIERS = ['Critique','Mépris','Défensive','Mur'];
@@ -166,11 +174,16 @@ const REACT_TILES = {
   w:['Resté zen','Désamorcé avec humour','Geste tendre'],
   g:['Resté calme',"J'ai écouté","J'ai expliqué",'Limite posée calmement'],
   o:['Agacé','Soupir','Ton sec',"J'ai pris l'air"],
-  r:['Haussé le ton','Réponse piquante','Je me suis braqué'],
-  k:["J'ai explosé",'Éloignement urgent']
+  r:['Haussé le ton','Réponse piquante','Je me suis braqué','Épuisé'],
+  k:["J'ai explosé",'À bout de nerfs','Éloignement urgent']
 };
 // Je vais : importance obligatoire
 const IMP = {n:'Neutre', o:'Important', r:'Urgent'};
+// dernier écran 🟠🔴⚫ : rattrapage, excuses, rancune
+const ONP = {oui:'Oui', non:'Non', pv:'Pas vraiment'};
+const ENSEMBLE = "Dans l'ensemble";
+// réactions tuile par tuile (et anciens moments v1.10 : une seule réaction)
+const reactsOf = e => e.reacts && Object.keys(e.reacts).length ? Object.entries(e.reacts).filter(([,r]) => r && r.c) : (e.react && e.react.c ? [[ENSEMBLE, e.react]] : []);
 const IMP_RANK = {r:0, o:1, n:2};
 const GRAVE = ['Mépris','Insulte','Insultes','Insultes / Humiliation'];
 // rattrapage : comment elle s'est rattrapée sur chaque tuile
@@ -210,6 +223,7 @@ const ICON = {
   stats:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/></svg>',
   bilan:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/><path d="M8 13h8M8 17h5"/></svg>',
   gear:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>',
+  board:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>',
   jv:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2"/></svg>',
   close:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>'
 };
@@ -309,7 +323,7 @@ function ratioOf(c){
   return pos/neg;
 }
 // couleur d'une tuile dans les stats : celle de la pastille où elle est proposée de base
-function tileColor(t){ for (const c of ['k','r','o','g']) if (TILES[c].acts.includes(t) || TILES[c].feel.includes(t)) return TC[c]; for (const c of ['k','r','o','g','w']) { const m = (S.settings.tiles||{})[c]; if (m && ((m.acts||[]).includes(t) || (m.feel||[]).includes(t))) return TC[c]; } return 'var(--accent)'; }
+function tileColor(t){ for (const c of ['k','r','o','g']) if (TILES[c].acts.includes(t) || TILES[c].feel.includes(t)) return TC[c]; for (const c of ['k','r','o','g','w']) { const m = (S.settings.tiles||{})[c]; if (m && ((m.acts||[]).includes(t) || (m.feel||[]).includes(t) || (m.react||[]).includes(t))) return TC[c]; } for (const c of ['k','r','o','g','w']) if (REACT_TILES[c].includes(t)) return TC[c]; return 'var(--accent)'; }
 const TC = {w:'var(--w)', g:'var(--g)', o:'var(--o)', r:'var(--r)', k:'#B4B4BE'};
 function inRange(list, from, to){ return list.filter(e => e.date >= from && e.date <= to); }
 function tagCounts(list, side){
@@ -334,7 +348,7 @@ function careAlert(){
   const k7 = inRange(entries(), addDays(t,-6), t).filter(e => e.color === 'k').length;
   const st = badStreak();
   if (st >= 3) return `Ça fait ${st} jours que ça ne va pas. Pense à toi : appelle un pote, sors marcher, mange un truc chaud.`;
-  if (k7 >= 2) return `${k7} lignes franchies en une semaine. Ce n'est pas rien. Pense à toi.`;
+  if (k7 >= 2) return `${k7} limites franchies en une semaine. Ce n'est pas rien. Pense à toi.`;
   return '';
 }
 
@@ -394,12 +408,12 @@ async function afterUnlock(){
 function render(){
   if (!S.unlocked) return renderPin();
   try { DB.put('kv', {k:'nav', v:{tab:S.tab, day:S.day, statsSeg:S.statsSeg, calMonth:S.calMonth, bilanSeg:S.bilanSeg}}); } catch(_) {}
-  const tabs = [['livre','Livre',ICON.book],['noires','Noires',ICON.black],['stats','Stats',ICON.stats],['jevais','Je vais',ICON.jv],['bilans','Bilans',ICON.bilan]];
+  const tabs = [['livre','Livre',ICON.book],['noires','Tableau',ICON.board],['stats','Stats',ICON.stats],['jevais','Je vais',ICON.jv],['bilans','Bilans',ICON.bilan]];
   $('#app').innerHTML = `<main id="main"></main>
   <nav class="tabs" aria-label="Navigation">${tabs.map(([k,l,i]) => `<button data-tab="${k}" class="${S.tab===k?'on':''}" ${S.tab===k?'aria-current="page"':''}>${i}${l}</button>`).join('')}</nav>`;
   $('#app').querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { S.tab = b.dataset.tab; if (S.tab === 'livre') S.day = todayStr(); render(); });
   const m = $('#main');
-  ({livre:renderLivre, noires:renderNoires, stats:renderStats, jevais:renderJeVais, bilans:renderBilans, reglages:renderReglages}[S.tab] || renderLivre)(m);
+  ({livre:renderLivre, noires:renderTableau, stats:renderStats, jevais:renderJeVais, bilans:renderBilans, reglages:renderReglages}[S.tab] || renderLivre)(m);
 }
 
 /* ---------- LIVRE ---------- */
@@ -410,11 +424,14 @@ function entryLine(e){
   if (e.devant) parts.push(devantLabel());
   const tags = [...Object.keys(e.elle||{}).map(t => 'Elle : ' + t), ...Object.keys(e.moi||{}).map(t => 'Moi : ' + t)];
   if (e.air) tags.push("J'ai pris l'air");
-  if (e.react && e.react.c) tags.push('Ma réaction ' + COLORS[e.react.c].name.toLowerCase() + (Object.keys(e.react.tiles||{}).length ? ' : ' + Object.keys(e.react.tiles).join(', ') : ''));
+  reactsOf(e).forEach(([t, r]) => tags.push('Ma réaction' + (t === ENSEMBLE ? '' : ' à ' + t) + ' : ' + COLORS[r.c].name.toLowerCase() + (Object.keys(r.tiles||{}).length ? ' (' + Object.keys(r.tiles).join(', ') + ')' : '')));
   const ph = (e.photos||[]).length + (e.ellePhotos||[]).length;
   const txt = e.what || e.elleNote || (e.feel && e.feel.length ? e.feel.join(', ') : '');
-  const rt = e.ratt && e.ratt.ok === 'oui' ? Object.values(e.ratt.tiles) : [];
-  const rattLine = e.ratt && e.ratt.ok ? (e.ratt.ok === 'non' ? 'Rattrapée : non' : 'Rattrapée : ' + (rt.length ? ['w','g','o'].filter(c => rt.some(r => r.lvl === c)).map(c => RATT[c].toLowerCase() + ' ' + rt.filter(r => r.lvl === c).length).join(' · ') : 'oui')) : '';
+  const rt = e.ratt && e.ratt.ok === 'oui' ? Object.values(e.ratt.tiles || {}) : [];
+  const rattLine = [
+    e.ratt && e.ratt.ok ? 'Rattrapée : ' + (rt.length ? ['w','g','o'].filter(c => rt.some(r => r.lvl === c)).map(c => RATT[c].toLowerCase() + ' ' + rt.filter(r => r.lvl === c).length).join(' · ') : ONP[e.ratt.ok].toLowerCase()) : '',
+    e.excuse && e.excuse.v ? 'Excuses : ' + ONP[e.excuse.v].toLowerCase() : '',
+    e.grudge ? 'Je lui en veux : ' + COLORS[e.grudge].name.toLowerCase() : ''].filter(Boolean).join(' · ');
   const canRatt = RATT_COLORS.includes(e.color) && !sel;
   return `<div class="entrywrap"><button class="item${on ? ' selon' : ''}" data-entry="${e.id}" ${sel ? `aria-pressed="${on}"` : ''} ${canRatt ? 'style="padding-right:52px"' : ''}>
     ${sel ? `<span class="selbox" aria-hidden="true">${on ? '✓' : ''}</span>` : ''}<span class="dot c-${e.color}" style="margin-top:3px"></span>
@@ -568,7 +585,7 @@ function sheet(head, body, foot, isDirty){
 }
 
 /* ---------- ENTRY editor (page de la pastille) ---------- */
-const TITLES = {w:'Journée parfaite', g:'Bon moment', o:'Moment tendu', r:'Moment difficile', k:'Ligne franchie'};
+const TITLES = {w:'Journée parfaite', g:'Bon moment', o:'Moment tendu', r:'Moment difficile', k:'Limite franchie'};
 
 async function saveDraft(d){ try { await DB.put('kv', {k:'draft', v:d}); } catch(_) {} }
 async function clearDraft(){ try { await DB.del('kv', 'draft'); } catch(_) {} }
@@ -583,7 +600,8 @@ function openEntry(id, color, draft, startAt, prefill){
   const fromNote = draft ? draft.fromNote : (prefill && prefill.fromNote);
   e.moi = e.moi || {}; e.elle = e.elle || {}; e.feel = e.feel || []; e.photos = e.photos || [];
   e.elleFeel = e.elleFeel || []; e.elleNote = e.elleNote || ''; e.ellePhotos = e.ellePhotos || [];
-  e.what = e.what || ''; e.need = e.need || ''; e.feelNotes = e.feelNotes || {}; e.elleFeelNotes = e.elleFeelNotes || {}; e.ratt = e.ratt || {ok:'', tiles:{}}; e.ratt.tiles = e.ratt.tiles || {}; e.react = e.react || {c:'', tiles:{}}; e.react.tiles = e.react.tiles || {};
+  e.what = e.what || ''; e.need = e.need || ''; e.feelNotes = e.feelNotes || {}; e.elleFeelNotes = e.elleFeelNotes || {}; e.ratt = e.ratt || {ok:'', tiles:{}}; e.ratt.tiles = e.ratt.tiles || {}; e.excuse = e.excuse || {v:'', how:''}; e.grudge = e.grudge || ''; e.ratt.how = e.ratt.how || '';
+  if (!e.reacts) { e.reacts = {}; if (e.react && e.react.c) e.reacts[ENSEMBLE] = e.react; } delete e.react;
   let suggestionDismissed = draft ? !!draft.sug : false;
   const removedPhotos = draft ? (draft.removed || []) : [];
   const newPhotos = draft ? (draft.newPhotos || []).map(p => ({side:'moi', ...p})) : [];
@@ -609,7 +627,7 @@ function openEntry(id, color, draft, startAt, prefill){
   const sideSteps = s => s === 'elle' ? ['elleAct','elleNote'] : [useReact() ? 'moiReact' : 'moiAct','moiFeel','moiNote'];
   const steps = () => { const o = e.qui === 'moi' ? ['moi','elle'] : ['elle','moi']; return ['qui', ...o.flatMap(sideSteps), ...(RATT_COLORS.includes(e.color) ? ['ratt'] : [])]; };
   if (startAt) step = Math.max(0, steps().indexOf(startAt));
-  const STEP_TITLE = {qui:'Qui ?', elleAct:"Elle · ce qu'elle a fait", elleFeel:'Elle · comment elle se sent', elleNote:'Elle · note', moiAct:"Moi · ce que j'ai fait", moiReact:'Moi · ma réaction', moiFeel:'Moi · comment je me sens', moiNote:'Moi · note', ratt:"Elle s'est rattrapée ?"};
+  const STEP_TITLE = {qui:'Qui ?', elleAct:"Elle · ce qu'elle a fait", elleFeel:'Elle · comment elle se sent', elleNote:'Elle · note', moiAct:"Moi · ce que j'ai fait", moiReact:'Moi · ma réaction', ratt:'Après coup', moiFeel:'Moi · comment je me sens', moiNote:'Moi · note', };
   const feelKey = side => side === 'elle' ? 'elleFeel' : 'feel';
   const feelNotesKey = side => side === 'elle' ? 'elleFeelNotes' : 'feelNotes';
   const photoKey = side => side === 'elle' ? 'ellePhotos' : 'photos';
@@ -625,13 +643,16 @@ function openEntry(id, color, draft, startAt, prefill){
     return `<div class="chips">${withSelected(actTiles(e.color, side), Object.keys(sel)).map(t => `<button class="chip ${t in sel ? 'on' : ''}" data-side="${side}" data-tile="${esc(t)}" aria-pressed="${t in sel}">${esc(t)}${sel[t] ? ' ✎' : ''}</button>`).join('')}
       <button class="chip add" data-addact="${side}">+ Ma tuile</button></div>${preview('side', side, sel)}`;
   }
-  function reactChips(){
-    const sel = e.react.tiles;
-    return `<div class="chips">${withSelected(reactTiles(e.react.c), Object.keys(sel)).map(t => `<button class="chip ${t in sel ? 'on' : ''}" data-react="moi" data-tile="${esc(t)}" aria-pressed="${t in sel}">${esc(t)}${sel[t] ? ' ✎' : ''}</button>`).join('')}
-      <button class="chip add" data-addreact="1">+ Ma tuile</button></div>${preview('react', 'moi', sel)}`;
+  // une réaction par chose qu'elle a faite (ou une seule « dans l'ensemble » si rien n'est coché chez elle)
+  const reactRows = () => Object.keys(e.elle).length ? Object.keys(e.elle) : [ENSEMBLE];
+  const rowOf = rt => (e.reacts[rt] = e.reacts[rt] || {c:'', tiles:{}});
+  function reactChips(rt){
+    const r = rowOf(rt), sel = r.tiles;
+    return `<div class="chips">${withSelected(reactTiles(r.c), Object.keys(sel)).map(t => `<button class="chip ${t in sel ? 'on' : ''}" data-react="${esc(rt)}" data-tile="${esc(t)}" aria-pressed="${t in sel}">${esc(t)}${sel[t] ? ' ✎' : ''}</button>`).join('')}
+      <button class="chip add" data-addreact="${esc(rt)}">+ Ma tuile</button></div>${preview('react', esc(rt), sel)}`;
   }
-  function tapReact(t){
-    const s = e.react.tiles, wasOn = t in s;
+  function tapReact(rt, t){
+    const s = rowOf(rt).tiles, wasOn = t in s;
     if (!wasOn) { s[t] = ''; redraw(); }
     bubble(t, s[t] || '', wasOn, (r, v) => { if (r === 'off') delete s[t]; else s[t] = v; redraw(); });
   }
@@ -678,8 +699,8 @@ function openEntry(id, color, draft, startAt, prefill){
   }
   function stepHasContent(k){
     if (k === 'qui') return !!e.qui;
-    if (k === 'ratt') return !!e.ratt.ok;
-    if (k === 'moiReact') return !!e.react.c;
+    if (k === 'ratt') return !!(e.ratt.ok || e.excuse.v || e.grudge);
+    if (k === 'moiReact') return reactRows().some(rt => e.reacts[rt] && e.reacts[rt].c);
     const side = k.startsWith('elle') ? 'elle' : 'moi';
     if (k.endsWith('Act')) return Object.keys(e[side]).length > 0 || (side === 'moi' && e.air);
     if (k.endsWith('Feel')) return e[feelKey(side)].length > 0;
@@ -693,6 +714,18 @@ function openEntry(id, color, draft, startAt, prefill){
       <div style="display:flex;flex-direction:column;gap:10px;margin-top:10px">${Object.entries(QUI).map(([q,l]) => `<button class="btn block" data-qui="${q}" style="height:60px;font-size:18px;${e.qui===q ? 'border-color:var(--accent);background:var(--accent-bg);font-weight:700' : ''}" aria-pressed="${e.qui===q}">${l}</button>`).join('')}</div>
       <small class="hint" style="margin-top:12px">On passera ensuite par Elle et par Moi : sur chaque écran tu choisis, ou tu passes s'il n'y a rien.</small>`;
     if (k === 'ratt') {
+      const q3 = (title, key, val, how, hkey) => `<div class="side"><div style="font-weight:700">${title}</div>
+        <div class="three">${Object.entries(ONP).map(([v,l]) => `<button data-${key}="${v}" style="${val===v ? 'border-color:var(--accent);background:var(--accent-bg);font-weight:700' : 'border-color:var(--border)'}" aria-pressed="${val===v}">${l}</button>`).join('')}</div>
+        ${val ? `<textarea data-${hkey}="1" rows="2" style="margin-top:10px" placeholder="Commentaire (facultatif)">${esc(how)}</textarea>` : ''}</div>`;
+      const legacy = Object.entries(e.ratt.tiles || {});
+      return `${q3("Elle s'est rattrapée ?", 'rok', e.ratt.ok, e.ratt.how, 'rhow2')}
+      ${legacy.length ? `<small class="hint">Avant : ${legacy.map(([t,r]) => esc(t) + ' ' + RATT[r.lvl].toLowerCase()).join(' · ')}</small>` : ''}
+      ${q3('Excuses ?', 'rex', e.excuse.v, e.excuse.how, 'exhow')}
+      <div class="side"><div style="font-weight:700">Tu lui en veux ?</div>
+        <div class="row" style="gap:14px;margin-top:10px">${['g','o','r','k'].map(c => `<button class="rattpick" data-grudge="${c}" aria-pressed="${e.grudge===c}" aria-label="${COLORS[c].name}"><span class="dot c-${c}" style="width:30px;height:30px;border-radius:15px;${e.grudge===c ? 'outline:3px solid var(--accent);outline-offset:2px' : ''}"></span></button>`).join('')}</div></div>
+      <small class="hint" style="margin-top:12px">Tu pourras compléter plus tard avec ↺ sur le moment, dans le Livre.</small>`;
+    }
+    if (k === 'rattOld') {
       const rows = Object.keys(e.elle).length ? Object.keys(e.elle) : ['Dans l\'ensemble'];
       return `<div class="three" style="margin-top:14px">${[['oui','Oui'],['non','Non']].map(([v,l]) => `<button data-rok="${v}" style="height:52px;font-size:17px;${e.ratt.ok===v ? 'border-color:var(--accent);background:var(--accent-bg);font-weight:700' : 'border-color:var(--border)'}" aria-pressed="${e.ratt.ok===v}">${l}</button>`).join('')}</div>
       ${e.ratt.ok === 'oui' ? rows.map(t => { const r = e.ratt.tiles[t] || {}; return `<div class="side"><div style="font-weight:700">${esc(t)}</div>
@@ -701,9 +734,10 @@ function openEntry(id, color, draft, startAt, prefill){
       ${e.ratt.ok === 'non' ? `<small class="hint" style="margin-top:12px">Noté. Une page dédiée viendra plus tard.</small>` : ''}
       <small class="hint" style="margin-top:12px">Tu pourras aussi l'ajouter plus tard avec ↺ sur le moment, dans le Livre.</small>`;
     }
-    if (k === 'moiReact') return `<div class="sub" style="margin-top:14px">La couleur de ma réaction</div>
-      <div class="pastilles" style="margin-top:8px">${ORDER.map(c => `<button class="pbtn c-${c}" data-rcol="${c}" style="width:48px;height:48px;${e.react.c===c ? 'outline:3px solid var(--accent);outline-offset:3px' : ''}" aria-pressed="${e.react.c===c}" aria-label="Réaction ${COLORS[c].name.toLowerCase()}"></button>`).join('')}</div>
-      ${e.react.c ? `<div style="margin-top:16px">${reactChips()}</div>` : `<small class="hint">Ta réaction peut être d'une autre couleur que la sienne.</small>`}`;
+    if (k === 'moiReact') return `<small class="hint" style="margin-top:10px">Pour chaque chose qu'elle a faite, la couleur de ta réaction (elle peut être différente de la sienne), puis tes tuiles.</small>
+      ${reactRows().map(rt => { const r = rowOf(rt); return `<div class="side"><div style="font-weight:700">${rt === ENSEMBLE ? ENSEMBLE : 'Elle : ' + esc(rt)}</div>
+      <div class="pastilles" style="margin-top:8px">${ORDER.map(c => `<button class="pbtn c-${c}" data-rcol="${c}" data-rt="${esc(rt)}" style="width:42px;height:42px;${r.c===c ? 'outline:3px solid var(--accent);outline-offset:3px' : ''}" aria-pressed="${r.c===c}" aria-label="Réaction ${COLORS[c].name.toLowerCase()}"></button>`).join('')}</div>
+      ${r.c ? `<div style="margin-top:12px">${reactChips(rt)}</div>` : ''}</div>`; }).join('')}`;
     const side = k.startsWith('elle') ? 'elle' : 'moi';
     if (k.endsWith('Act')) return `
       ${needsSuggestion() ? `<div class="banner warn"><strong>${esc(GRAVE.find(g => g in e.elle || g in e.moi))}, c'est sérieux.</strong> Ce serait plutôt une pastille rouge ? C'est toi qui choisis.
@@ -750,6 +784,8 @@ function openEntry(id, color, draft, startAt, prefill){
     const w = ov.querySelector('#ewhat'), n = ov.querySelector('#eneed'), en = ov.querySelector('#enote'), tm = ov.querySelector('#etime');
     if (w) e.what = w.value; if (n) e.need = n.value; if (en) e.elleNote = en.value; if (tm && tm.value) e.time = tm.value;
     ov.querySelectorAll('[data-rhow]').forEach(i => { const t = i.dataset.rhow; if (e.ratt.tiles[t]) e.ratt.tiles[t].how = i.value; });
+    const rh = ov.querySelector('[data-rhow2]'); if (rh) e.ratt.how = rh.value;
+    const xh = ov.querySelector('[data-exhow]'); if (xh) e.excuse.how = xh.value;
   }
   function bind(){
     ov.querySelectorAll('[data-close]').forEach(b => b.onclick = () => ov.tryClose());
@@ -760,9 +796,11 @@ function openEntry(id, color, draft, startAt, prefill){
     ov.querySelectorAll('[data-qui]').forEach(b => b.onclick = () => { syncText(); e.qui = b.dataset.qui; step = 1; draw(); });
     ov.querySelectorAll('[data-feel]').forEach(b => b.onclick = () => { syncText(); tapFeel(b.dataset.feel, b.dataset.tile); });
     ov.querySelectorAll('[data-side]').forEach(b => b.onclick = () => { syncText(); tapAct(b.dataset.side, b.dataset.tile); });
-    ov.querySelectorAll('[data-react]').forEach(b => b.onclick = () => { syncText(); tapReact(b.dataset.tile); });
-    ov.querySelectorAll('[data-rcol]').forEach(b => b.onclick = () => { syncText(); e.react.c = e.react.c === b.dataset.rcol ? '' : b.dataset.rcol; redraw(); });
-    ov.querySelectorAll('[data-addreact]').forEach(b => b.onclick = async () => { syncText(); const v = (prompt(`Nom de ta tuile (ma réaction, ${COLORS[e.react.c].name.toLowerCase()}) :`) || '').trim(); if (!v) return; await addMyTile(e.react.c, 'react', v); if (!(v in e.react.tiles)) tapReact(v); else redraw(); });
+    ov.querySelectorAll('[data-react]').forEach(b => b.onclick = () => { syncText(); tapReact(b.dataset.react, b.dataset.tile); });
+    ov.querySelectorAll('[data-rcol]').forEach(b => b.onclick = () => { syncText(); const r = rowOf(b.dataset.rt); r.c = r.c === b.dataset.rcol ? '' : b.dataset.rcol; redraw(); });
+    ov.querySelectorAll('[data-addreact]').forEach(b => b.onclick = async () => { syncText(); const rt = b.dataset.addreact, r = rowOf(rt); const v = (prompt(`Nom de ta tuile (ma réaction, ${COLORS[r.c].name.toLowerCase()}) :`) || '').trim(); if (!v) return; await addMyTile(r.c, 'react', v); if (!(v in r.tiles)) tapReact(rt, v); else redraw(); });
+    ov.querySelectorAll('[data-rex]').forEach(b => b.onclick = () => { syncText(); e.excuse.v = e.excuse.v === b.dataset.rex ? '' : b.dataset.rex; redraw(); });
+    ov.querySelectorAll('[data-grudge]').forEach(b => b.onclick = () => { syncText(); e.grudge = e.grudge === b.dataset.grudge ? '' : b.dataset.grudge; redraw(); });
     ov.querySelectorAll('[data-addact]').forEach(b => b.onclick = async () => { syncText(); const v = (prompt(`Nom de ta tuile (${COLORS[e.color].name.toLowerCase()}, ce qui a été fait) :`) || '').trim(); if (!v) return; await addMyTile(e.color, 'acts', v); if (!(v in e[b.dataset.addact])) tapAct(b.dataset.addact, v); else redraw(); });
     ov.querySelectorAll('[data-addfeel]').forEach(b => b.onclick = async () => { syncText(); const v = (prompt(`Nom de ta tuile (${COLORS[e.color].name.toLowerCase()}, ressenti) :`) || '').trim(); if (!v) return; await addMyTile(e.color, 'feel', v); if (!e[feelKey(b.dataset.addfeel)].includes(v)) tapFeel(b.dataset.addfeel, v); else redraw(); });
     const dv = ov.querySelector('#devant'); if (dv) dv.onclick = () => { syncText(); e.devant = !e.devant; redraw(); };
@@ -786,11 +824,12 @@ function openEntry(id, color, draft, startAt, prefill){
       syncText();
       Object.keys(e.elle).forEach(k => e.elle[k] = (e.elle[k]||'').trim());
       Object.keys(e.moi).forEach(k => e.moi[k] = (e.moi[k]||'').trim());
-      if (!steps().includes('moiReact') || !e.react.c) e.react = {c:'', tiles:{}};
-      Object.keys(e.react.tiles).forEach(k => e.react.tiles[k] = (e.react.tiles[k]||'').trim());
+      if (!steps().includes('moiReact')) e.reacts = {};
+      const keep = reactRows();
+      Object.keys(e.reacts).forEach(k => { const r = e.reacts[k]; if (!r.c || !keep.includes(k)) delete e.reacts[k]; else Object.keys(r.tiles).forEach(t => r.tiles[t] = (r.tiles[t]||'').trim()); });
+      e.ratt.how = (e.ratt.how || '').trim(); e.excuse.how = (e.excuse.how || '').trim();
       e.what = e.what.trim(); e.need = e.need.trim(); e.elleNote = e.elleNote.trim();
       Object.values(e.ratt.tiles).forEach(r => r.how = (r.how || '').trim());
-      if (e.ratt.ok !== 'oui') e.ratt.tiles = {};
       for (const p of newPhotos) { await DB.put('photos', {id:p.id, blob:p.blob}); e[photoKey(p.side)].push(p.id); }
       for (const p of removedPhotos) await DB.del('photos', p);
       await saveItem(e);
@@ -841,6 +880,67 @@ function renderNoires(m){
   m.querySelectorAll('[data-entry]').forEach(b => b.onclick = () => { const e = S.items.find(x => x.id === b.dataset.entry); S.day = e.date; openEntry(e.id); });
 }
 
+// calendrier coloré d'un mois (Stats et Tableau)
+function calGrid(month, f){
+  const [y, mo] = month.split('-').map(Number), first = new Date(y, mo-1, 1), last = new Date(y, mo, 0), t = todayStr();
+  let cells = '';
+  for (let i = 0; i < (first.getDay()+6)%7; i++) cells += '<div></div>';
+  for (let n = 1; n <= last.getDate(); n++) {
+    const ds = `${month}-${pad2(n)}`;
+    const es = entries().filter(e => e.date === ds).sort((a,b) => a.time.localeCompare(b.time));
+    const shown = f && f.size ? es.filter(e => f.has(e.color)) : es;
+    const faded = f && f.size && !shown.length;
+    cells += `<button class="day ${ds===t?'today':''} ${ds>t?'fut':''} ${faded?'faded':''}" data-day="${ds}" ${ds>t?'disabled':''} aria-label="${n} ${MOIS[mo-1]}, ${es.length} moment(s)">
+      <span class="n">${n}</span><span class="ds">${shown.slice(0,8).map(e => `<span class="dot sm c-${e.color}"></span>`).join('')}</span></button>`;
+  }
+  return `<div class="cal">${['L','M','M','J','V','S','D'].map(x => `<div class="h">${x}</div>`).join('')}${cells}</div>`;
+}
+/* ---------- TABLEAU ---------- */
+function renderTableau(m){
+  const t = todayStr();
+  const seg = S.tbSeg || 'semaine';
+  const month = S.tbMonth || t.slice(0,7);
+  const [y, mo] = month.split('-').map(Number);
+  const from = seg === 'semaine' ? mondayOf(t) : `${month}-01`;
+  const to = seg === 'semaine' ? addDays(mondayOf(t), 6) : ymd(new Date(y, mo, 0));
+  const list = inRange(entries(), from, to);
+  const c = counts(list), r = ratioOf(c), v = verdict(r);
+  const blacks = list.filter(e => e.color === 'k').sort((a,b) => (b.date+b.time).localeCompare(a.date+a.time));
+  const short = e => { const tg = Object.keys(e.elle||{}).slice(0,2).join(', '); const tx = e.elleNote || e.what || ''; return [tg, tx.length > 50 ? tx.slice(0,50) + '…' : tx].filter(Boolean).join(' · ') || 'Pas de texte'; };
+  m.innerHTML = `<h1>Tableau</h1>
+  <div class="seg" role="tablist"><button data-tb="semaine" class="${seg==='semaine'?'on':''}">Cette semaine</button><button data-tb="mois" class="${seg==='mois'?'on':''}">${seg==='mois' ? cap(MOIS[mo-1]) + ' ' + y : 'Mois'}</button></div>
+  <div class="card" style="text-align:center">
+    <div class="sub">Bons moments pour 1 mauvais</div>
+    <div class="bignum" style="color:${v.col};margin-top:6px">${fmtRatio(r)}</div>
+    <div style="font-weight:700;color:${v.col};margin-top:6px">${esc(v.t)}</div>
+    ${c.k ? `<div class="banner warn" style="text-align:left"><strong>⚫ ${c.k} limite${c.k>1?'s':''} franchie${c.k>1?'s':''}</strong> sur la période. Une limite franchie ne se compense pas, quel que soit le ratio.</div>` : ''}
+    <small class="hint">Repère de Gottman : au moins 5 bons moments pour 1 mauvais dans les couples stables. C'est un repère, pas un diagnostic.</small>
+  </div>
+  <div class="card"><div class="sub">Limites franchies${blacks.length ? ' (' + blacks.length + ')' : ''}</div>
+    ${blacks.length ? blacks.map(e => `<button class="item" data-entry="${e.id}"><span class="dot c-k" style="margin-top:3px"></span><span style="flex:1;min-width:0"><span class="meta">${esc(shortDate(e.date))} · ${esc(e.time)}</span><span class="txt" style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(short(e))}</span></span></button>`).join('') : '<div class="empty" style="padding:8px 0">Aucune sur la période.</div>'}</div>
+  <div class="card">
+    <div class="between"><button class="iconbtn" id="tprev" aria-label="Mois précédent">${ICON.left}</button>
+      <div style="font-size:16px;font-weight:600">${cap(MOIS[mo-1])} ${y}</div>
+      <button class="iconbtn" id="tnext" aria-label="Mois suivant" ${month >= t.slice(0,7) ? 'disabled' : ''}>${ICON.right}</button></div>
+    <div style="margin-top:10px">${calGrid(month)}</div>
+    <small class="hint">Touche un jour pour ouvrir sa page.</small></div>
+  <div class="card"><div class="sub">Toutes les pastilles · ${seg === 'semaine' ? 'cette semaine' : cap(MOIS[mo-1])}</div>
+    <div class="pastilles" style="margin-top:10px">${ORDER.map(k => `<button class="rattpick" data-tcol="${k}" aria-label="${COLORS[k].name} : ${c[k]}"><span class="pbtn c-${k}" style="width:46px;height:46px"></span><b style="font-size:16px">${c[k]}</b></button>`).join('')}</div>
+    <small class="hint">Touche une couleur pour voir la liste.</small></div>`;
+  m.querySelectorAll('[data-tb]').forEach(b => b.onclick = () => { S.tbSeg = b.dataset.tb; render(); });
+  const shift = n => { const d = new Date(y, mo-1+n, 1); S.tbMonth = `${d.getFullYear()}-${pad2(d.getMonth()+1)}`; render(); };
+  $('#tprev').onclick = () => shift(-1); $('#tnext').onclick = () => { if (month < t.slice(0,7)) shift(1); };
+  m.querySelectorAll('[data-day]').forEach(b => b.onclick = () => { S.day = b.dataset.day; S.tab = 'livre'; render(); });
+  m.querySelectorAll('[data-entry]').forEach(b => b.onclick = () => { const e = S.items.find(x => x.id === b.dataset.entry); S.day = e.date; openEntry(e.id); });
+  m.querySelectorAll('[data-tcol]').forEach(b => b.onclick = () => {
+    const k = b.dataset.tcol, l = list.filter(e => e.color === k).sort((a,b2) => (b2.date+b2.time).localeCompare(a.date+a.time));
+    const ov = sheet(`<div class="row" style="gap:10px"><span class="dot c-${k}"></span><span style="font-weight:700">${COLORS[k].name}s · ${l.length}</span></div>`,
+      l.length ? l.map(e => `<button class="item" data-open="${e.id}"><span class="meta" style="min-width:86px">${esc(shortDate(e.date))} ${esc(e.time)}</span><span class="txt" style="margin:0;flex:1">${esc(short(e))}</span></button>`).join('') : '<div class="empty" style="padding:12px 0">Aucune sur la période.</div>',
+      `<button class="btn block" data-close>Fermer</button>`);
+    ov.querySelectorAll('[data-open]').forEach(x => x.onclick = () => { const e = S.items.find(i => i.id === x.dataset.open); ov.remove(); S.day = e.date; openEntry(e.id); });
+  });
+}
+
 /* ---------- STATS ---------- */
 function renderStats(m){
   m.innerHTML = `<h1>Stats</h1>
@@ -888,9 +988,10 @@ function renderStats(m){
     const rep = {oui:0, partie:0, non:0}; list.filter(e => e.repair).forEach(e => rep[e.repair]++);
     const air = list.filter(e => e.air).length;
     const pairs = {}; const reactT = {};
-    list.forEach(e => { if (!e.react || !e.react.c) return; const k = e.color + e.react.c; pairs[k] = (pairs[k]||0) + 1; Object.keys(e.react.tiles||{}).forEach(t => reactT[t] = (reactT[t]||0) + 1); });
+    list.forEach(e => reactsOf(e).forEach(([, r]) => { const k = e.color + r.c; pairs[k] = (pairs[k]||0) + 1; Object.keys(r.tiles||{}).forEach(t => reactT[t] = (reactT[t]||0) + 1); }));
     const devant = list.filter(e => e.devant).length;
-    const rt = {oui:0, non:0, w:0, g:0, o:0}; list.forEach(e => { if (!e.ratt || !e.ratt.ok) return; rt[e.ratt.ok]++; Object.values(e.ratt.tiles||{}).forEach(r => rt[r.lvl]++); });
+    const rt = {oui:0, non:0, pv:0}, ex = {oui:0, non:0, pv:0}, gr = {g:0, o:0, r:0, k:0};
+    list.forEach(e => { if (e.ratt && e.ratt.ok) rt[e.ratt.ok]++; if (e.excuse && e.excuse.v) ex[e.excuse.v]++; if (e.grudge) gr[e.grudge]++; });
     const maxCav = Math.max(1, ...CAVALIERS.map(k => (elle[k]||0) + (moi[k]||0)));
     const rColor = r === null ? 'var(--dim)' : (r >= 5 ? 'var(--g)' : r >= 1 ? 'var(--o)' : 'var(--r)');
     body.innerHTML = `${monthNav}
@@ -898,7 +999,7 @@ function renderStats(m){
       <div class="card"><div class="sub">Bons / mauvais moments</div><div class="stat">${fmtRatio(r)} <span style="font-size:14px;font-weight:500;color:var(--muted)">pour 1</span></div>
         <div class="bar" style="margin-top:8px"><i style="width:${r === null ? 0 : Math.min(100, (r === Infinity ? 5 : r)/5*100)}%;background:${rColor}"></i></div>
         <small class="hint">Repère d'un couple stable : 5 pour 1 (Gottman)</small></div>
-      <div class="card"><div class="sub">Lignes franchies</div><div class="stat row"><span class="dot c-k" style="width:14px;height:14px"></span>${c.k}</div><small class="hint">Ce mois · jamais compensées</small></div>
+      <div class="card"><div class="sub">Limites franchies</div><div class="stat row"><span class="dot c-k" style="width:14px;height:14px"></span>${c.k}</div><small class="hint">Ce mois · jamais compensées</small></div>
     </div>
     <div class="card"><div class="sub" style="margin-bottom:8px">Moments par semaine</div>${weekChart(from, to)}</div>
     <div class="card"><div class="sub" style="margin-bottom:10px">Ce qui s'est joué (Elle / Moi)</div>
@@ -909,8 +1010,9 @@ function renderStats(m){
       <div class="card"><div class="sub">Qui ?</div><div style="font-size:14px;margin-top:6px;line-height:1.7">Elle ${qui.elle} · Moi ${qui.moi}<br>Les deux ${qui.deux}<br>${esc(devantLabel())} : ${devant}</div></div>
       <div class="card"><div class="sub">Réparé ?</div><div style="font-size:14px;margin-top:6px;line-height:1.7">Oui ${rep.oui} · En partie ${rep.partie}<br>Non ${rep.non}</div></div>
     </div>
-    <div class="card"><div class="sub">Elle s'est rattrapée ?</div><div style="font-size:14px;margin-top:6px;line-height:1.7">Oui ${rt.oui} · Non ${rt.non}<br>
-      ${['w','g','o'].map(c => `<span class="row" style="display:inline-flex;gap:4px;margin-right:10px"><span class="dot c-${c}" style="width:10px;height:10px"></span>${RATT[c]} ${rt[c]}</span>`).join('')}</div></div>
+    <div class="card"><div class="sub">Après coup</div><div style="font-size:14px;margin-top:6px;line-height:1.8">
+      Rattrapée : oui ${rt.oui} · non ${rt.non} · pas vraiment ${rt.pv}<br>Excuses : oui ${ex.oui} · non ${ex.non} · pas vraiment ${ex.pv}<br>
+      Je lui en veux : ${['g','o','r','k'].map(c => `<span class="row" style="display:inline-flex;gap:4px;margin-right:8px"><span class="dot c-${c}" style="width:10px;height:10px"></span>${gr[c]}</span>`).join('')}</div></div>
     <div class="card"><div class="sub">Ma réaction face à elle</div>${Object.keys(pairs).length ? `<div style="font-size:14px;margin-top:8px;line-height:2">${Object.entries(pairs).sort((a,b) => b[1]-a[1]).map(([k,v]) => `<div class="row" style="gap:6px">Elle <span class="dot c-${k[0]}" style="width:12px;height:12px"></span> → moi <span class="dot c-${k[1]}" style="width:12px;height:12px"></span> : ${v} fois</div>`).join('')}</div>` : '<div class="empty" style="font-size:13px;margin-top:6px">Rien encore</div>'}</div>
     <div class="card"><div class="sub" style="margin-bottom:6px">Toutes les tuiles du mois</div>
       ${allTiles("Ce qu'elle a fait", elle)}${Object.keys(feelCounts(list, 'elleFeel')).length ? allTiles('Comment elle se sent (avant v1.6)', feelCounts(list, 'elleFeel')) : ''}${allTiles("Ce que j'ai fait", moi)}${allTiles('Ma réaction', reactT)}${allTiles('Comment je me sens', feelCounts(list, 'feel'))}
@@ -978,7 +1080,7 @@ function summaryText(from, to, kind){
   const c = counts(list); const r = ratioOf(c);
   const good = c.w + c.g, bad = c.o + c.r;
   const lines = [];
-  lines.push(`${good} bon${good>1?'s':''} moment${good>1?'s':''}${c.w ? ' (dont ' + c.w + ' parfait' + (c.w>1?'s':'') + ')' : ''}, ${bad} difficile${bad>1?'s':''}, ${c.k} ligne${c.k>1?'s':''} franchie${c.k>1?'s':''}.`);
+  lines.push(`${good} bon${good>1?'s':''} moment${good>1?'s':''}${c.w ? ' (dont ' + c.w + ' parfait' + (c.w>1?'s':'') + ')' : ''}, ${bad} difficile${bad>1?'s':''}, ${c.k} limite${c.k>1?'s':''} franchie${c.k>1?'s':''}.`);
   if (r !== null) lines.push(r === Infinity ? 'Aucun moment difficile : ratio parfait.' : `Ratio de ${fmtRatio(r)} pour 1, ${r >= 5 ? 'au niveau d\'un couple stable' : r >= 1 ? 'en dessous du repère de 5 pour 1' : 'les mauvais moments dominent'}.`);
   const elle = tagCounts(list,'elle'), moi = tagCounts(list,'moi');
   const te = topN(elle,2), tm = topN(moi,2);
@@ -996,15 +1098,44 @@ function summaryText(from, to, kind){
   if (pr !== null && r !== null && r !== Infinity && pr !== Infinity) lines.push(r > pr + 0.2 ? 'Mieux que la période précédente.' : r < pr - 0.2 ? 'Moins bien que la période précédente.' : 'À peu près pareil que la période précédente.');
   return lines.join(' ');
 }
+// pastilles d'une période : « 🔴 2 difficiles »
+const PLABEL = {w:['parfait','parfaits'], g:['bon moment','bons moments'], o:['tendu','tendus'], r:['difficile','difficiles'], k:['limite franchie','limites franchies']};
+function pillsHTML(c){ return `<div class="pills">${ORDER.filter(k => c[k]).map(k => `<span class="pill"><span class="dot c-${k}"></span><b>${c[k]}</b> ${PLABEL[k][c[k]>1?1:0]}</span>`).join('')}</div>`; }
+function verdict(r){ return r === null ? {t:'Pas encore de données', col:'var(--dim)'} : r === Infinity || r >= 5 ? {t:'Sain : au niveau d\'un couple stable', col:'var(--g)'} : r >= 1 ? {t:'Fragile : sous le repère de 5 pour 1', col:'var(--o)'} : {t:'Les mauvais moments dominent', col:'var(--r)'}; }
+function bilanBlocks(from, to, kind){
+  const list = inRange(entries(), from, to);
+  const jl = jvInRange(from, to);
+  if (!list.length && !jl.length) return '<div class="empty" style="margin-top:8px">Rien de noté sur cette période.</div>';
+  const c = counts(list), r = ratioOf(c), v = verdict(r);
+  const rows = [];
+  const row = (k, val) => val && rows.push(`<div class="brow"><span>${k}</span><span>${val}</span></div>`);
+  const fmtTop = (m2, n) => topN(m2, n).map(([k,x]) => esc(k) + (x > 1 ? ' ×' + x : '')).join(' · ');
+  row('Chez elle', fmtTop(tagCounts(list,'elle'), 3));
+  row('Chez toi', fmtTop(tagCounts(list,'moi'), 3));
+  const rc = {}; list.forEach(e => reactsOf(e).forEach(([,x]) => rc[x.c] = (rc[x.c]||0) + 1));
+  row('Mes réactions', ORDER.filter(k => rc[k]).map(k => `<span class="dot c-${k}" style="width:10px;height:10px"></span> ${rc[k]}`).join(' &nbsp;'));
+  row('Ressenti', fmtTop(feelCounts(list), 3));
+  const reps = list.filter(e => e.color === 'r' || e.color === 'k');
+  if (reps.length) row('Réparé', `${reps.filter(e => e.repair === 'oui').length} sur ${reps.length}`);
+  const ap = list.filter(e => e.ratt && e.ratt.ok || e.excuse && e.excuse.v);
+  if (ap.length) row('Après coup', `rattrapée ${list.filter(e => e.ratt && e.ratt.ok === 'oui').length}/${ap.length} · excuses ${list.filter(e => e.excuse && e.excuse.v === 'oui').length}/${ap.length}`);
+  if (jl.length) row('Je vais', ['elle','moi'].map(w => { const l = jl.filter(j => j.who === w); return `${w === 'elle' ? 'Elle' : 'Moi'} ${l.filter(j => j.status === 'done').length} fait · ${l.filter(j => j.status === 'drop').length} en l'air`; }).join('<br>'));
+  const len = Math.round((parseYmd(to) - parseYmd(from)) / 86400000) + 1;
+  const pFrom = kind === 'mois' ? ymd(new Date(parseYmd(from).getFullYear(), parseYmd(from).getMonth()-1, 1)) : addDays(from, -len);
+  const pr = ratioOf(counts(inRange(entries(), pFrom, addDays(from, -1))));
+  if (pr !== null && r !== null && r !== Infinity && pr !== Infinity) row('Tendance', r > pr + 0.2 ? '↗ mieux qu\'avant' : r < pr - 0.2 ? '↘ moins bien qu\'avant' : '→ pareil qu\'avant');
+  return `${pillsHTML(c)}
+    ${list.length ? `<div class="row" style="gap:10px;margin-top:10px;align-items:baseline"><span style="font-size:30px;font-weight:800;color:${v.col}">${fmtRatio(r)}</span><span class="sub">pour 1 · ${v.t}</span></div>` : ''}
+    ${c.k ? `<div class="sub" style="margin-top:4px;color:#F58A8E">⚫ ${c.k} limite${c.k>1?'s':''} franchie${c.k>1?'s':''}, jamais compensée${c.k>1?'s':''}</div>` : ''}
+    <div class="brows">${rows.join('')}</div>`;
+}
 function renderBilans(m){
   const ps = S.bilanSeg === 'semaine' ? periodsWeeks() : periodsMonths();
   m.innerHTML = `<h1>Bilans</h1>
   <div class="seg" role="tablist"><button data-bs="semaine" class="${S.bilanSeg==='semaine'?'on':''}">Semaines</button><button data-bs="mois" class="${S.bilanSeg==='mois'?'on':''}">Mois</button></div>
   ${ps.map((p,i) => `<div class="card">
     <div style="font-weight:700">${esc(p.label)}${i===0 ? ' <span class="sub" style="font-weight:400">· en cours</span>' : ''}</div>
-    <div class="row" style="gap:6px;margin:8px 0">${ORDER.map(c => { const n = counts(inRange(entries(), p.from, p.to))[c]; return n ? `<span class="row" style="gap:4px;font-size:13px"><span class="dot c-${c}" style="width:10px;height:10px"></span>${n}</span>` : ''; }).join('')}</div>
-    <div class="bilan-text">${esc(summaryText(p.from, p.to, S.bilanSeg))}</div>
-    ${jvInRange(p.from, p.to).length ? `<div class="sub" style="margin-top:8px">Je vais : ${['elle','moi'].map(w => { const l = jvInRange(p.from, p.to).filter(j => j.who === w); return `${w === 'elle' ? 'Elle' : 'Moi'} ${l.filter(j => j.status === 'done').length} fait(s), ${l.filter(j => j.status === 'drop').length} en l'air`; }).join(' · ')}</div>` : ''}
+    ${bilanBlocks(p.from, p.to, S.bilanSeg)}
     <button class="btn block" data-export="${p.from}|${p.to}|${esc(p.label)}" style="margin-top:12px">Exporter ce bilan pour Claude</button>
   </div>`).join('')}
   <small class="hint" style="margin-top:12px">Le fichier exporté contient le détail de la période (moments, tuiles, annotations, notes). Envoie-le dans la conversation avec Claude pour en parler.</small>`;
@@ -1019,7 +1150,7 @@ function periodText(from, to, label){
   L.push('## Résumé automatique');
   L.push(summaryText(from, to, S.bilanSeg));
   L.push('');
-  L.push('Légende : ⚪ parfait · 🟢 bon moment · 🟠 tendu · 🔴 difficile · ⚫ elle est allée trop loin');
+  L.push('Légende : ⚪ parfait · 🟢 bon moment · 🟠 tendu · 🔴 difficile · ⚫ limite franchie (elle est allée trop loin)');
   L.push('');
   L.push('## Détail jour par jour');
   let d = from; const sym = {w:'⚪',g:'🟢',o:'🟠',r:'🔴',k:'⚫'};
@@ -1035,15 +1166,16 @@ function periodText(from, to, label){
         const fmtFeel = (a, n) => a.map(k => (n||{})[k] ? `${k} (${n[k]})` : k).join(', ');
         if (i.elleFeel && i.elleFeel.length) L.push(`  - Elle se sent : ${fmtFeel(i.elleFeel, i.elleFeelNotes)}`);
         if (i.elleNote) L.push(`  - Note sur elle : ${i.elleNote}`);
-        if (i.react && i.react.c) L.push(`  - Ma réaction : ${sym[i.react.c]} ${COLORS[i.react.c].name}${Object.keys(i.react.tiles||{}).length ? ' — ' + fmt(i.react.tiles) : ''}`);
+        reactsOf(i).forEach(([t, r]) => L.push(`  - Ma réaction${t === ENSEMBLE ? '' : ' à « ' + t + ' »'} : ${sym[r.c]} ${COLORS[r.c].name}${Object.keys(r.tiles||{}).length ? ' — ' + fmt(r.tiles) : ''}`));
         if (Object.keys(i.moi||{}).length) L.push(`  - J'ai fait : ${fmt(i.moi)}`);
         if (i.feel && i.feel.length) L.push(`  - Je me sens : ${fmtFeel(i.feel, i.feelNotes)}`);
         if (i.what) L.push(`  - Ma note : ${i.what}`);
         if (i.air) L.push(`  - J'ai pris l'air`);
         if (i.need) L.push(`  - Ce dont j'aurais eu besoin : ${i.need}`);
         if (i.repair) L.push(`  - Réparé : ${REPAIR[i.repair]}`);
-        if (i.ratt && i.ratt.ok === 'non') L.push(`  - Rattrapée : non`);
-        if (i.ratt && i.ratt.ok === 'oui') { L.push(`  - Rattrapée : oui`); Object.entries(i.ratt.tiles||{}).forEach(([t,r]) => L.push(`    - ${t} : ${RATT[r.lvl]}${r.how ? ' (' + r.how + ')' : ''}`)); }
+        if (i.ratt && i.ratt.ok) { L.push(`  - Elle s'est rattrapée : ${ONP[i.ratt.ok]}${i.ratt.how ? ' (' + i.ratt.how + ')' : ''}`); Object.entries(i.ratt.tiles||{}).forEach(([t,r]) => L.push(`    - ${t} : ${RATT[r.lvl]}${r.how ? ' (' + r.how + ')' : ''}`)); }
+        if (i.excuse && i.excuse.v) L.push(`  - Excuses : ${ONP[i.excuse.v]}${i.excuse.how ? ' (' + i.excuse.how + ')' : ''}`);
+        if (i.grudge) L.push(`  - Je lui en veux : ${sym[i.grudge]} ${COLORS[i.grudge].name}`);
         const nph = (i.photos||[]).length + (i.ellePhotos||[]).length;
         if (nph) L.push(`  - Photos jointes : ${nph} (non incluses dans ce fichier)`);
       });

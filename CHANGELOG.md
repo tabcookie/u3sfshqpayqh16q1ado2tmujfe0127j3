@@ -1,5 +1,12 @@
 # Journal des versions
 
+## v1.5 — 16 nov. 2026
+- Tuiles de base triées par couleur (positif en blanc/vert, petits accrocs en orange, prises de tête en rouge, le pire en noir), séparées entre ce qui a été fait et comment on se sent.
+- Toucher une tuile ouvre une bulle pour écrire ; OK la referme.
+- « + Ma tuile » range la tuile dans la couleur en cours ; gestion par couleur dans Réglages.
+- Pastille blanche : « Valider direct ».
+- Stats : toutes les tuiles du mois comptées une par une, en quatre groupes.
+
 ## v1.4 — 16 nov. 2026
 - La pastille se remplit écran par écran : Qui ? → Elle (ce qu'elle a fait, comment elle se sent, note) → Moi (pareil), ou Moi d'abord si on choisit « Moi ». « Passer » quand il n'y a rien.
 - Nouveau : comment elle se sent, note sur elle et ses propres photos.
@@ -28,6 +35,6 @@
 Première version complète : PIN, Livre, pastilles, Noires, Stats, Bilans, Réglages, sauvegarde.
 
 ## À faire plus tard
-- Affiner les tuiles et ajouter des stats liées aux nouvelles tuiles (dont « comment elle se sent »).
+- Affiner les tuiles de base à l'usage.
 - Icône d'écran d'accueil (PNG) et fonctionnement hors connexion (service worker) au moment de la mise en ligne.
 - Design (plus tard, à sa demande).

@@ -75,9 +75,12 @@ textarea,input[type=text],input[type=time]{width:100%;background:var(--bg);borde
 .side{border:1px solid var(--border);border-radius:14px;padding:12px;margin-top:10px}
 .side h3{margin:0 0 8px;font-size:15px}
 .annot{margin-top:8px;display:flex;flex-direction:column;gap:6px}
-.annot .a{display:flex;gap:8px;align-items:center}
-.annot .a span{font-size:13px;color:var(--muted);min-width:90px}
-.annot .a input{padding:8px 10px;font-size:15px}
+.annot .a{display:flex;gap:8px;align-items:baseline;background:none;border:none;border-left:2px solid var(--accent-bg);padding:4px 8px;text-align:left;color:var(--text);width:100%}
+.annot .a span{font-size:13px;color:var(--muted);flex-shrink:0}
+.annot .a em{font-style:normal;font-size:14px;line-height:1.35}
+.overlay.bubble-ov{z-index:30;align-items:center;padding:16px}
+.bubble{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:16px;width:100%;max-width:440px}
+.bubble textarea{margin-top:10px}
 .photos{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
 .photos .ph{position:relative;width:76px;height:76px;border-radius:10px;overflow:hidden;background:var(--bg)}
 .photos .ph img{width:100%;height:100%;object-fit:cover}
@@ -134,11 +137,23 @@ const COLORS = {
 const ORDER = ['w','g','o','r','k'];
 const RANK = {w:0,g:1,o:2,r:3,k:4};
 
-// tuiles vierges au départ : seules les 4 de Gottman sont proposées, le reste c'est lui qui l'ajoute
-const DEFAULT_FEEL = [];
-const DEFAULT_ACTS = ['Critique','Mépris','Défensive','Mur'];
+// tuiles de base triées par couleur : acts = ce qu'elle a fait / ce que j'ai fait ; feel = comment on se sent
+const GOOD_TILES = {
+  acts:['Câlin','Tendresse','Compliment','Merci','Écoute','Aide','Soutien','Rire ensemble','Moment partagé','Surprise',"S'est excusé(e)"],
+  feel:['Heureux(se)','Apaisé(e)','Détendu(e)','Écouté(e)','Aimé(e)','Complice','En confiance','Fier(e)','Reconnaissant(e)','Soulagé(e)']
+};
+const TILES = {
+  w: GOOD_TILES,
+  g: GOOD_TILES,
+  o: {acts:['Oubli','Petit reproche','Pas de vaisselle','Trop de téléphone','Retard','Remarque sèche','Pas écouté(e)'],
+      feel:['Stress','Ennui','Flemme','Agacé(e)','Fatigué(e)']},
+  r: {acts:['Prise de tête','Communication risquée',"Risque d'engueulade",'Critique','Défensive','Mur','A crié','Ton qui monte','Ignoré(e)'],
+      feel:['Gros stress','Tendu(e)','Colère','Blessé(e)','Seul(e)','Épuisé(e)']},
+  k: {acts:['Mépris','Insultes','Reproches','Laisser tomber','Dépassement de limite','Menace','Humiliation'],
+      feel:['Stress énorme','Rage','Humilié(e)','Abandonné(e)','Dégoûté(e)','Brisé(e)','Peur']}
+};
 const CAVALIERS = ['Critique','Mépris','Défensive','Mur'];
-const GRAVE = ['Mépris','Insulte'];
+const GRAVE = ['Mépris','Insulte','Insultes'];
 
 const QUI = {elle:'Elle', moi:'Moi', deux:'Les deux'};
 const REPAIR = {oui:'Oui', partie:'En partie', non:'Non'};
@@ -211,7 +226,7 @@ const DB = {
 /* ---------- state ---------- */
 const S = {
   items: [],            // entries (type:'e') and notes (type:'n')
-  settings: {pin:null, feel:[], acts:[], reminder:'21:00', alertSeen:''},
+  settings: {pin:null, feel:[], acts:[], tiles:{}, reminder:'21:00', alertSeen:''},
   unlocked: false,
   tab: 'livre',
   day: todayStr(),
@@ -224,8 +239,18 @@ const S = {
 const entries = () => S.items.filter(i => i.type === 'e');
 const notes = () => S.items.filter(i => i.type === 'n');
 const byDay = d => S.items.filter(i => i.date === d).sort((a,b) => (a.time||'').localeCompare(b.time||'') || a.ts - b.ts);
-const feelTiles = () => [...DEFAULT_FEEL, ...S.settings.feel];
-const actTiles = () => [...DEFAULT_ACTS, ...S.settings.acts];
+// tuiles de base de la couleur + celles qu'il a ajoutées (pour cette couleur, ou avant v1.5 pour toutes)
+const myTiles = (c, kind) => ((S.settings.tiles || {})[c] || {})[kind] || [];
+const uniq = a => [...new Set(a)];
+const feelTiles = c => uniq([...TILES[c].feel, ...myTiles(c, 'feel'), ...(S.settings.feel || [])]);
+const actTiles = c => uniq([...TILES[c].acts, ...myTiles(c, 'acts'), ...(S.settings.acts || [])]);
+async function addMyTile(c, kind, name){
+  if ((kind === 'acts' ? actTiles(c) : feelTiles(c)).includes(name)) return;
+  S.settings.tiles = S.settings.tiles || {};
+  S.settings.tiles[c] = S.settings.tiles[c] || {acts:[], feel:[]};
+  (S.settings.tiles[c][kind] = S.settings.tiles[c][kind] || []).push(name);
+  await saveSettings();
+}
 
 async function saveItem(it){ const i = S.items.findIndex(x => x.id === it.id); if (i >= 0) S.items[i] = it; else S.items.push(it); await DB.put('items', it); }
 async function deleteItem(id){ const it = S.items.find(x => x.id === id); if (it) for (const p of [...(it.photos||[]), ...(it.ellePhotos||[])]) await DB.del('photos', p); S.items = S.items.filter(x => x.id !== id); await DB.del('items', id); }
@@ -256,13 +281,16 @@ function ratioOf(c){
   if (!neg) return Infinity;
   return pos/neg;
 }
+// couleur d'une tuile dans les stats : celle de la pastille où elle est proposée de base
+function tileColor(t){ for (const c of ['k','r','o','g']) if (TILES[c].acts.includes(t) || TILES[c].feel.includes(t)) return TC[c]; for (const c of ['k','r','o','g','w']) { const m = (S.settings.tiles||{})[c]; if (m && ((m.acts||[]).includes(t) || (m.feel||[]).includes(t))) return TC[c]; } return 'var(--accent)'; }
+const TC = {w:'var(--w)', g:'var(--g)', o:'var(--o)', r:'var(--r)', k:'#B4B4BE'};
 function inRange(list, from, to){ return list.filter(e => e.date >= from && e.date <= to); }
 function tagCounts(list, side){
   const m = {};
   list.forEach(e => { const o = e[side] || {}; Object.keys(o).forEach(k => { m[k] = (m[k]||0) + 1; }); });
   return m;
 }
-function feelCounts(list){ const m = {}; list.forEach(e => (e.feel||[]).forEach(k => { m[k] = (m[k]||0)+1; })); return m; }
+function feelCounts(list, key){ const m = {}; list.forEach(e => (e[key || 'feel']||[]).forEach(k => { m[k] = (m[k]||0)+1; })); return m; }
 function topN(m, n){ return Object.entries(m).sort((a,b) => b[1]-a[1]).slice(0,n); }
 
 function badStreak(){
@@ -459,12 +487,12 @@ async function clearDraft(){ try { await DB.del('kv', 'draft'); } catch(_) {} }
 function openEntry(id, color, draft){
   const isNew = draft ? draft.isNew : !id;
   const e = draft ? draft.e
-    : isNew ? {id:uid(), type:'e', date:S.day, time: S.day === todayStr() ? nowTime() : '12:00', ts:Date.now(), color, qui:'', what:'', need:'', feel:[], moi:{}, elle:{}, elleFeel:[], elleNote:'', ellePhotos:[], air:false, photos:[], repair:null}
+    : isNew ? {id:uid(), type:'e', date:S.day, time: S.day === todayStr() ? nowTime() : '12:00', ts:Date.now(), color, qui:'', what:'', need:'', feel:[], feelNotes:{}, moi:{}, elle:{}, elleFeel:[], elleFeelNotes:{}, elleNote:'', ellePhotos:[], air:false, photos:[], repair:null}
             : JSON.parse(JSON.stringify(S.items.find(x => x.id === id)));
   // compatibilité avec les anciens moments
   e.moi = e.moi || {}; e.elle = e.elle || {}; e.feel = e.feel || []; e.photos = e.photos || [];
   e.elleFeel = e.elleFeel || []; e.elleNote = e.elleNote || ''; e.ellePhotos = e.ellePhotos || [];
-  e.what = e.what || ''; e.need = e.need || '';
+  e.what = e.what || ''; e.need = e.need || ''; e.feelNotes = e.feelNotes || {}; e.elleFeelNotes = e.elleFeelNotes || {};
   let suggestionDismissed = draft ? !!draft.sug : false;
   const removedPhotos = draft ? (draft.removed || []) : [];
   const newPhotos = draft ? (draft.newPhotos || []).map(p => ({side:'moi', ...p})) : [];
@@ -487,19 +515,49 @@ function openEntry(id, color, draft){
   const steps = () => { const o = e.qui === 'moi' ? ['moi','elle'] : ['elle','moi']; return ['qui', ...o.flatMap(s => [s+'Act', s+'Feel', s+'Note'])]; };
   const STEP_TITLE = {qui:'Qui ?', elleAct:"Elle · ce qu'elle a fait", elleFeel:'Elle · comment elle se sent', elleNote:'Elle · note', moiAct:"Moi · ce que j'ai fait", moiFeel:'Moi · comment je me sens', moiNote:'Moi · note'};
   const feelKey = side => side === 'elle' ? 'elleFeel' : 'feel';
+  const feelNotesKey = side => side === 'elle' ? 'elleFeelNotes' : 'feelNotes';
   const photoKey = side => side === 'elle' ? 'ellePhotos' : 'photos';
   const withSelected = (list, sel) => [...list, ...sel.filter(t => !list.includes(t))];
 
+  // aperçu des petits textes sous les tuiles (on touche pour modifier)
+  function preview(kind, side, notes){
+    const filled = Object.entries(notes).filter(([,v]) => v);
+    return filled.length ? `<div class="annot">${filled.map(([t,v]) => `<button class="a" data-${kind}="${side}" data-tile="${esc(t)}"><span>${esc(t)}</span><em>${esc(v)}</em></button>`).join('')}</div>` : '';
+  }
   function actChips(side){
     const sel = e[side];
-    return `<div class="chips">${withSelected(actTiles(), Object.keys(sel)).map(t => `<button class="chip ${t in sel ? 'on' : ''}" data-side="${side}" data-tile="${esc(t)}" aria-pressed="${t in sel}">${esc(t)}</button>`).join('')}
-      <button class="chip add" data-addact="${side}">+ Ma tuile</button></div>
-      ${Object.keys(sel).length ? `<div class="annot">${Object.keys(sel).map(t => `<div class="a"><span>${esc(t)}</span><input type="text" data-annot="${side}" data-tile="${esc(t)}" value="${esc(sel[t])}" placeholder="Petite précision…"></div>`).join('')}</div>` : ''}`;
+    return `<div class="chips">${withSelected(actTiles(e.color), Object.keys(sel)).map(t => `<button class="chip ${t in sel ? 'on' : ''}" data-side="${side}" data-tile="${esc(t)}" aria-pressed="${t in sel}">${esc(t)}${sel[t] ? ' ✎' : ''}</button>`).join('')}
+      <button class="chip add" data-addact="${side}">+ Ma tuile</button></div>${preview('side', side, sel)}`;
   }
   function feelChips(side){
-    const sel = e[feelKey(side)];
-    return `<div class="chips">${withSelected(feelTiles(), sel).map(t => `<button class="chip ${sel.includes(t) ? 'on' : ''}" data-feel="${side}" data-tile="${esc(t)}" aria-pressed="${sel.includes(t)}">${esc(t)}</button>`).join('')}
-      <button class="chip add" data-addfeel="${side}">+ Ma tuile</button></div>`;
+    const sel = e[feelKey(side)], notes = e[feelNotesKey(side)];
+    return `<div class="chips">${withSelected(feelTiles(e.color), sel).map(t => `<button class="chip ${sel.includes(t) ? 'on' : ''}" data-feel="${side}" data-tile="${esc(t)}" aria-pressed="${sel.includes(t)}">${esc(t)}${notes[t] ? ' ✎' : ''}</button>`).join('')}
+      <button class="chip add" data-addfeel="${side}">+ Ma tuile</button></div>${preview('feel', side, Object.fromEntries(sel.map(t => [t, notes[t] || ''])))}`;
+  }
+  // mini bulle : un texte pour la tuile touchée, OK la referme et on revient aux tuiles
+  function bubble(tile, text, wasOn, onDone){
+    const bo = document.createElement('div');
+    bo.className = 'overlay bubble-ov';
+    bo.innerHTML = `<div class="bubble" role="dialog" aria-modal="true" aria-label="${esc(tile)}">
+      <div style="font-size:17px;font-weight:700">${esc(tile)}</div>
+      <textarea id="bubbleText" rows="4" placeholder="Raconte en quelques mots… (facultatif)">${esc(text)}</textarea>
+      <div class="row" style="margin-top:10px">${wasOn ? '<button class="btn danger" id="bubbleOff">Retirer</button>' : ''}<button class="btn primary" id="bubbleOk" style="flex:1">OK</button></div></div>`;
+    document.body.appendChild(bo);
+    const ta = bo.querySelector('#bubbleText');
+    setTimeout(() => ta.focus(), 50);
+    bo.querySelector('#bubbleOk').onclick = () => { bo.remove(); onDone('ok', ta.value.trim()); };
+    const off = bo.querySelector('#bubbleOff'); if (off) off.onclick = () => { bo.remove(); onDone('off'); };
+    bo.addEventListener('click', ev => { if (ev.target === bo) { bo.remove(); onDone('ok', ta.value.trim()); } });
+  }
+  function tapAct(side, t){
+    const s = e[side], wasOn = t in s;
+    if (!wasOn) { s[t] = ''; redraw(); }
+    bubble(t, s[t] || '', wasOn, (r, v) => { if (r === 'off') delete s[t]; else s[t] = v; redraw(); });
+  }
+  function tapFeel(side, t){
+    const k = feelKey(side), nk = feelNotesKey(side), wasOn = e[k].includes(t);
+    if (!wasOn) { e[k] = [...e[k], t]; redraw(); }
+    bubble(t, e[nk][t] || '', wasOn, (r, v) => { if (r === 'off') { e[k] = e[k].filter(x => x !== t); delete e[nk][t]; } else { if (v) e[nk][t] = v; else delete e[nk][t]; } redraw(); });
   }
   function photosBlock(side){
     const k = photoKey(side);
@@ -521,7 +579,8 @@ function openEntry(id, color, draft){
                            : !!(e.what || e.need || e.photos.length || newPhotos.some(p => p.side === 'moi'));
   }
   function body(k){
-    if (k === 'qui') return `<div class="sub" style="margin:14px 0 4px">Qui est en cause ?</div>
+    if (k === 'qui') return `${e.color === 'w' && isNew ? `<button class="btn primary block" id="wquick" style="height:60px;font-size:18px;margin-top:14px">Journée parfaite · Valider direct</button><small class="hint">Ou détaille ci-dessous si tu en as envie.</small>` : ''}
+      <div class="sub" style="margin:14px 0 4px">Qui est en cause ?</div>
       <div style="display:flex;flex-direction:column;gap:10px;margin-top:10px">${Object.entries(QUI).map(([q,l]) => `<button class="btn block" data-qui="${q}" style="height:60px;font-size:18px;${e.qui===q ? 'border-color:var(--accent);background:var(--accent-bg);font-weight:700' : ''}" aria-pressed="${e.qui===q}">${l}</button>`).join('')}</div>
       <small class="hint" style="margin-top:12px">On passera ensuite par Elle et par Moi : sur chaque écran tu choisis, ou tu passes s'il n'y a rien.</small>`;
     const side = k.startsWith('elle') ? 'elle' : 'moi';
@@ -569,7 +628,6 @@ function openEntry(id, color, draft){
   function syncText(){
     const w = ov.querySelector('#ewhat'), n = ov.querySelector('#eneed'), en = ov.querySelector('#enote'), tm = ov.querySelector('#etime');
     if (w) e.what = w.value; if (n) e.need = n.value; if (en) e.elleNote = en.value; if (tm && tm.value) e.time = tm.value;
-    ov.querySelectorAll('[data-annot]').forEach(i => { e[i.dataset.annot][i.dataset.tile] = i.value; });
   }
   function bind(){
     ov.querySelectorAll('[data-close]').forEach(b => b.onclick = () => ov.tryClose());
@@ -578,10 +636,11 @@ function openEntry(id, color, draft){
     const nx = ov.querySelector('#enext'); if (nx) nx.onclick = () => { syncText(); step++; draw(); };
     const pv = ov.querySelector('#eprev'); if (pv) pv.onclick = () => { syncText(); step--; draw(); };
     ov.querySelectorAll('[data-qui]').forEach(b => b.onclick = () => { syncText(); e.qui = b.dataset.qui; step = 1; draw(); });
-    ov.querySelectorAll('[data-feel]').forEach(b => b.onclick = () => { syncText(); const k = feelKey(b.dataset.feel), t = b.dataset.tile; e[k] = e[k].includes(t) ? e[k].filter(x => x !== t) : [...e[k], t]; redraw(); });
-    ov.querySelectorAll('[data-side]').forEach(b => b.onclick = () => { syncText(); const s = e[b.dataset.side], t = b.dataset.tile; if (t in s) delete s[t]; else s[t] = ''; redraw(); });
-    ov.querySelectorAll('[data-addact]').forEach(b => b.onclick = async () => { syncText(); const v = (prompt('Nom de ta tuile (pour Elle et Moi) :') || '').trim(); if (v && !actTiles().includes(v)) { S.settings.acts.push(v); await saveSettings(); } if (v) e[b.dataset.addact][v] = e[b.dataset.addact][v] || ''; redraw(); });
-    ov.querySelectorAll('[data-addfeel]').forEach(b => b.onclick = async () => { syncText(); const v = (prompt('Nom de ta tuile (ressenti) :') || '').trim(); if (v && !feelTiles().includes(v)) { S.settings.feel.push(v); await saveSettings(); } const k = feelKey(b.dataset.addfeel); if (v && !e[k].includes(v)) e[k].push(v); redraw(); });
+    ov.querySelectorAll('[data-feel]').forEach(b => b.onclick = () => { syncText(); tapFeel(b.dataset.feel, b.dataset.tile); });
+    ov.querySelectorAll('[data-side]').forEach(b => b.onclick = () => { syncText(); tapAct(b.dataset.side, b.dataset.tile); });
+    ov.querySelectorAll('[data-addact]').forEach(b => b.onclick = async () => { syncText(); const v = (prompt(`Nom de ta tuile (${COLORS[e.color].name.toLowerCase()}, ce qui a été fait) :`) || '').trim(); if (!v) return; await addMyTile(e.color, 'acts', v); if (!(v in e[b.dataset.addact])) tapAct(b.dataset.addact, v); else redraw(); });
+    ov.querySelectorAll('[data-addfeel]').forEach(b => b.onclick = async () => { syncText(); const v = (prompt(`Nom de ta tuile (${COLORS[e.color].name.toLowerCase()}, ressenti) :`) || '').trim(); if (!v) return; await addMyTile(e.color, 'feel', v); if (!e[feelKey(b.dataset.addfeel)].includes(v)) tapFeel(b.dataset.addfeel, v); else redraw(); });
+    const wq = ov.querySelector('#wquick'); if (wq) wq.onclick = async () => { syncText(); await saveItem(e); await close(); toast('Journée parfaite notée'); render(); };
     const air = ov.querySelector('#air'); if (air) air.onclick = () => { syncText(); e.air = !e.air; redraw(); };
     const sr = ov.querySelector('#sugRed'); if (sr) sr.onclick = () => { syncText(); e.color = 'r'; redraw(); };
     const sk = ov.querySelector('#sugKeep'); if (sk) sk.onclick = () => { syncText(); suggestionDismissed = true; redraw(); };
@@ -713,8 +772,10 @@ function renderStats(m){
       <div class="card"><div class="sub">Qui ?</div><div style="font-size:14px;margin-top:6px;line-height:1.7">Elle ${qui.elle} · Moi ${qui.moi}<br>Les deux ${qui.deux}</div></div>
       <div class="card"><div class="sub">Réparé ?</div><div style="font-size:14px;margin-top:6px;line-height:1.7">Oui ${rep.oui} · En partie ${rep.partie}<br>Non ${rep.non}</div></div>
     </div>
-    <div class="card"><div class="sub">Ressentis les plus fréquents</div><div style="font-size:14px;margin-top:6px;line-height:1.6">${topN(feelCounts(list),5).map(([k,v]) => esc(k) + ' ' + v).join(' · ') || '<span class="empty">Rien encore</span>'}</div>
+    <div class="card"><div class="sub" style="margin-bottom:6px">Toutes les tuiles du mois</div>
+      ${allTiles("Ce qu'elle a fait", elle)}${allTiles('Comment elle se sent', feelCounts(list, 'elleFeel'))}${allTiles("Ce que j'ai fait", moi)}${allTiles('Comment je me sens', feelCounts(list, 'feel'))}
       <small class="hint">« J'ai pris l'air » : ${air} fois</small></div>`;
+    function allTiles(title, m2){ const o = topN(m2, 999); const mx = Math.max(1, ...o.map(x => x[1])); return `<div style="font-size:14px;font-weight:600;margin:12px 0 6px">${title}</div>${o.length ? `<div class="bars">${o.map(([k,v]) => `<span>${esc(k)}</span><div class="bar"><i style="width:${v/mx*100}%;background:${tileColor(k)}"></i></div><span>${v}</span>`).join('')}</div>` : '<span class="empty" style="font-size:13px">Rien encore</span>'}`; }
     function topList(title, m2){ const o = topN(Object.fromEntries(Object.entries(m2).filter(([k]) => !CAVALIERS.includes(k))), 4); return o.length ? `<div style="font-size:13px;margin-top:10px"><span class="sub">${title} : </span>${o.map(([k,v]) => esc(k) + ' ' + v).join(' · ')}</div>` : ''; }
   }
   $('#mprev').onclick = () => shiftMonth(-1);
@@ -830,10 +891,11 @@ function periodText(from, to, label){
         L.push(`- ${i.time} ${sym[i.color]} ${COLORS[i.color].name}${i.qui ? ' · Qui : ' + QUI[i.qui] : ''}`);
         const fmt = o => Object.entries(o||{}).map(([k,v]) => v ? `${k} (${v})` : k).join(', ');
         if (Object.keys(i.elle||{}).length) L.push(`  - Elle a fait : ${fmt(i.elle)}`);
-        if (i.elleFeel && i.elleFeel.length) L.push(`  - Elle se sent : ${i.elleFeel.join(', ')}`);
+        const fmtFeel = (a, n) => a.map(k => (n||{})[k] ? `${k} (${n[k]})` : k).join(', ');
+        if (i.elleFeel && i.elleFeel.length) L.push(`  - Elle se sent : ${fmtFeel(i.elleFeel, i.elleFeelNotes)}`);
         if (i.elleNote) L.push(`  - Note sur elle : ${i.elleNote}`);
         if (Object.keys(i.moi||{}).length) L.push(`  - J'ai fait : ${fmt(i.moi)}`);
-        if (i.feel && i.feel.length) L.push(`  - Je me sens : ${i.feel.join(', ')}`);
+        if (i.feel && i.feel.length) L.push(`  - Je me sens : ${fmtFeel(i.feel, i.feelNotes)}`);
         if (i.what) L.push(`  - Ma note : ${i.what}`);
         if (i.air) L.push(`  - J'ai pris l'air`);
         if (i.need) L.push(`  - Ce dont j'aurais eu besoin : ${i.need}`);
@@ -876,11 +938,11 @@ function renderReglages(m){
     <input type="time" id="rem" value="${esc(S.settings.reminder)}">
     <small class="hint">Une appli web sur iPhone ne peut pas envoyer de rappel toute seule. Pour l'avoir : app Raccourcis › Automatisation › Heure de la journée (${esc(S.settings.reminder)}, tous les jours) › action « Ouvrir l'URL » avec l'adresse d'Umoral, ou « Afficher une notification ». Désactive « Demander avant d'exécuter ».</small></div>
   <div class="card"><div style="font-weight:700">Mes tuiles</div>
-    <div class="sub" style="margin:6px 0">Ressentis ajoutés :</div>
-    <div class="chips">${S.settings.feel.map((t,i) => `<button class="chip" data-rmfeel="${i}" aria-label="Retirer ${esc(t)}">${esc(t)} ×</button>`).join('') || '<span class="empty">Aucune</span>'}</div>
-    <div class="sub" style="margin:10px 0 6px">Tuiles Elle / Moi ajoutées :</div>
-    <div class="chips">${S.settings.acts.map((t,i) => `<button class="chip" data-rmact="${i}" aria-label="Retirer ${esc(t)}">${esc(t)} ×</button>`).join('') || '<span class="empty">Aucune</span>'}</div>
-    <small class="hint">Les nouvelles tuiles s'ajoutent avec « + Ma tuile » dans une pastille.</small></div>
+    ${ORDER.map(c => { const m = (S.settings.tiles||{})[c] || {}; const all = [...(m.acts||[]).map(t => ['acts',t]), ...(m.feel||[]).map(t => ['feel',t])]; return `<div class="row" style="margin:12px 0 6px;gap:8px"><span class="dot c-${c}"></span><span class="sub">${COLORS[c].name}</span></div>
+      <div class="chips">${all.map(([k,t]) => `<button class="chip" data-rmtile="${c}|${k}|${esc(t)}" aria-label="Retirer ${esc(t)}">${esc(t)} ×</button>`).join('') || '<span class="empty">Aucune</span>'}</div>`; }).join('')}
+    ${(S.settings.feel.length || S.settings.acts.length) ? `<div class="sub" style="margin:12px 0 6px">Ajoutées avant (toutes couleurs) :</div>
+      <div class="chips">${S.settings.feel.map((t,i) => `<button class="chip" data-rmfeel="${i}" aria-label="Retirer ${esc(t)}">${esc(t)} ×</button>`).join('')}${S.settings.acts.map((t,i) => `<button class="chip" data-rmact="${i}" aria-label="Retirer ${esc(t)}">${esc(t)} ×</button>`).join('')}</div>` : ''}
+    <small class="hint">Les nouvelles tuiles s'ajoutent avec « + Ma tuile » dans une pastille, pour sa couleur. Les retirer ici ne touche pas aux moments déjà notés.</small></div>
   <div class="card"><div style="font-weight:700">Code</div>
     <button class="btn block" id="chpin" style="margin-top:10px">Changer mon code</button>
     <button class="btn block" id="lock" style="margin-top:8px">Verrouiller maintenant</button></div>
@@ -890,6 +952,7 @@ function renderReglages(m){
   $('#backup').onclick = backupAll;
   $('#restore').onclick = () => { const inp = $('#restoreInput'); inp.value = ''; inp.onchange = () => inp.files[0] && restoreAll(inp.files[0]); inp.click(); };
   m.querySelectorAll('[data-rmfeel]').forEach(b => b.onclick = async () => { S.settings.feel.splice(+b.dataset.rmfeel, 1); await saveSettings(); render(); });
+  m.querySelectorAll('[data-rmtile]').forEach(b => b.onclick = async () => { const [c,k,t] = b.dataset.rmtile.split('|'); const l = S.settings.tiles[c][k]; l.splice(l.indexOf(t), 1); await saveSettings(); render(); });
   m.querySelectorAll('[data-rmact]').forEach(b => b.onclick = async () => { S.settings.acts.splice(+b.dataset.rmact, 1); await saveSettings(); render(); });
   $('#chpin').onclick = async () => {
     const cur = prompt('Ton code actuel :');
@@ -930,7 +993,7 @@ async function restoreAll(file){
     S.items = await DB.all('items') || [];
     const st = await DB.get('kv', 'settings');
     if (st) S.settings = {...S.settings, ...st.v};
-    S.settings.feel = S.settings.feel || []; S.settings.acts = S.settings.acts || [];
+    S.settings.feel = S.settings.feel || []; S.settings.acts = S.settings.acts || []; S.settings.tiles = S.settings.tiles || {};
   } catch(e) {
     $('#app').innerHTML = '<div class="pin"><div>Impossible d\'ouvrir le stockage du téléphone. Ouvre Umoral dans Safari (pas en navigation privée).</div></div>';
     return;

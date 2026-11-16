@@ -1,0 +1,864 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Umoral">
+<meta name="theme-color" content="#121214">
+<title>Umoral</title>
+<style>
+:root{
+  --bg:#121214; --surface:#1E1E23; --surface2:#26262C; --border:#2C2C33;
+  --text:#EDEDF0; --muted:#A3A3AD; --dim:#5E5E68; --accent:#8AB4F8; --accent-bg:#22314D;
+  --w:#F4F4F5; --g:#34C77B; --o:#F5A524; --r:#F2555A; --k:#000000;
+  --safe-b: env(safe-area-inset-bottom, 0px); --safe-t: env(safe-area-inset-top, 0px);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",system-ui,sans-serif;font-size:16px}
+button,input,textarea{font-family:inherit;font-size:inherit;color:inherit}
+button{cursor:pointer}
+#app{display:flex;flex-direction:column;height:100%;max-width:520px;margin:0 auto}
+main{flex:1;overflow-y:auto;padding:calc(var(--safe-t) + 12px) 16px 24px;-webkit-overflow-scrolling:touch}
+nav.tabs{display:flex;border-top:1px solid var(--border);background:#18181C;padding:6px 0 calc(var(--safe-b) + 8px)}
+nav.tabs button{flex:1;background:none;border:none;color:var(--muted);font-size:12px;display:flex;flex-direction:column;align-items:center;gap:3px;min-height:48px;justify-content:center}
+nav.tabs button.on{color:var(--accent);font-weight:600}
+nav.tabs svg{width:22px;height:22px}
+h1{font-size:22px;margin:4px 0 4px}
+.sub{color:var(--muted);font-size:13px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:14px;margin-top:12px}
+.row{display:flex;align-items:center;gap:10px}
+.between{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.iconbtn{width:44px;height:44px;border-radius:22px;border:1px solid var(--border);background:var(--surface);color:var(--text);display:flex;align-items:center;justify-content:center}
+.iconbtn:disabled{color:var(--dim)}
+.iconbtn svg{width:18px;height:18px}
+.pastilles{display:flex;justify-content:space-between}
+.pbtn{width:52px;height:52px;border-radius:26px;border:none}
+.dot{display:inline-block;width:16px;height:16px;border-radius:8px;flex-shrink:0}
+.dot.sm{width:8px;height:8px;border-radius:4px}
+.c-w{background:var(--w)} .c-g{background:var(--g)} .c-o{background:var(--o)} .c-r{background:var(--r)} .c-k{background:var(--k);box-shadow:0 0 0 2px #7A7A84}
+.dot.sm.c-k{box-shadow:0 0 0 1px #8A8A94}
+.item{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);width:100%;background:none;border-left:none;border-right:none;border-top:none;text-align:left;color:var(--text)}
+.item:last-child{border-bottom:none}
+.item .meta{font-size:13px;color:var(--muted)}
+.item .txt{font-size:15px;margin-top:3px;line-height:1.4;white-space:pre-wrap}
+.empty{color:var(--muted);font-style:italic}
+.btn{height:46px;border-radius:12px;border:1px solid var(--border);background:var(--surface);color:var(--text);padding:0 14px;font-size:15px}
+.btn.primary{background:var(--accent);color:#0B1220;border:none;font-weight:700}
+.btn.danger{background:transparent;border-color:#5A2427;color:#F58A8E}
+.btn.block{width:100%}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{min-height:40px;padding:0 14px;border-radius:20px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:14px}
+.chip.on{border-color:var(--accent);background:var(--accent-bg);font-weight:600}
+.chip.add{border-style:dashed;color:var(--muted);background:transparent}
+.seg{display:flex;background:var(--surface);border-radius:12px;padding:4px;margin-top:12px}
+.seg button{flex:1;height:40px;border-radius:9px;border:none;background:transparent;color:var(--muted);font-size:14px}
+.seg button.on{background:#2F2F37;color:var(--text);font-weight:600}
+label.q{display:block;font-size:14px;font-weight:600;margin:16px 0 8px}
+textarea,input[type=text],input[type=time]{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:10px 12px;font-size:16px;color:var(--text);resize:none}
+.banner{background:#1A2233;border:1px solid #2B3A57;border-radius:14px;padding:12px 14px;margin-top:12px;font-size:14px;line-height:1.4}
+.banner.warn{background:#2A1F12;border-color:#6B4A1A}
+.three{display:flex;gap:8px;margin-top:10px}
+.three button{flex:1;height:44px;border-radius:10px;border:1px solid #2B3A57;background:var(--bg);color:var(--text)}
+/* sheet */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:20;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--surface);width:100%;max-width:520px;max-height:94%;border-radius:22px 22px 0 0;border-top:1px solid var(--border);display:flex;flex-direction:column}
+.sheet .head{padding:10px 18px 8px;border-bottom:1px solid var(--border)}
+.sheet .grab{width:40px;height:5px;border-radius:3px;background:#44444D;margin:0 auto 10px}
+.sheet .body{overflow-y:auto;padding:4px 18px 16px;-webkit-overflow-scrolling:touch}
+.sheet .foot{padding:10px 18px calc(var(--safe-b) + 12px);border-top:1px solid var(--border);display:flex;gap:8px}
+.side{border:1px solid var(--border);border-radius:14px;padding:12px;margin-top:10px}
+.side h3{margin:0 0 8px;font-size:15px}
+.annot{margin-top:8px;display:flex;flex-direction:column;gap:6px}
+.annot .a{display:flex;gap:8px;align-items:center}
+.annot .a span{font-size:13px;color:var(--muted);min-width:90px}
+.annot .a input{padding:8px 10px;font-size:15px}
+.photos{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.photos .ph{position:relative;width:76px;height:76px;border-radius:10px;overflow:hidden;background:var(--bg)}
+.photos .ph img{width:100%;height:100%;object-fit:cover}
+.photos .ph button{position:absolute;top:2px;right:2px;width:26px;height:26px;border-radius:13px;border:none;background:rgba(0,0,0,.7);color:#fff;font-size:14px}
+/* calendar */
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.cal .h{font-size:11px;color:var(--muted);text-align:center}
+.day{min-height:54px;border-radius:12px;border:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;align-items:center;padding-top:6px;gap:5px;color:var(--text)}
+.day.today{border-color:var(--accent)}
+.day.fut{color:var(--dim)}
+.day.faded{opacity:.35}
+.day .n{font-size:13px;font-weight:600}
+.day .ds{display:flex;flex-wrap:wrap;gap:2px;justify-content:center;max-width:36px}
+.stat{font-size:28px;font-weight:700;margin-top:4px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid2 .card{margin-top:0}
+.bars{display:grid;grid-template-columns:96px 1fr 28px;gap:8px 10px;align-items:center;font-size:13px}
+.bar{height:8px;background:var(--border);border-radius:4px;overflow:hidden}
+.bar i{display:block;height:8px;border-radius:4px}
+.pin{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:22px;padding:24px}
+.pin .dots{display:flex;gap:14px}
+.pin .dots i{width:14px;height:14px;border-radius:7px;border:2px solid var(--muted)}
+.pin .dots i.f{background:var(--text);border-color:var(--text)}
+.pad{display:grid;grid-template-columns:repeat(3,72px);gap:14px}
+.pad button{height:72px;border-radius:36px;border:none;background:var(--surface);font-size:26px;color:var(--text)}
+.pad button.blank{background:transparent}
+.toast{position:fixed;left:50%;bottom:calc(var(--safe-b) + 90px);transform:translateX(-50%);background:#2F2F37;color:var(--text);padding:10px 16px;border-radius:12px;font-size:14px;z-index:40}
+.bilan-text{font-size:15px;line-height:1.5}
+small.hint{display:block;color:var(--muted);font-size:12px;margin-top:6px;line-height:1.4}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<input type="file" id="photoInput" accept="image/*" multiple hidden>
+<input type="file" id="restoreInput" accept=".json,application/json" hidden>
+<script>
+'use strict';
+/* =========================================================
+   Umoral — journal perso. Tout est stocké sur l'appareil.
+   ========================================================= */
+
+const COLORS = {
+  w:{name:'Blanche', label:'Journée parfaite', pos:2, neg:0},
+  g:{name:'Verte', label:'Bon moment', pos:1, neg:0},
+  o:{name:'Orange', label:'Tendu', pos:0, neg:1},
+  r:{name:'Rouge', label:'Difficile', pos:0, neg:2},
+  k:{name:'Noire', label:'Elle est allée trop loin', pos:0, neg:0}
+};
+const ORDER = ['w','g','o','r','k'];
+const RANK = {w:0,g:1,o:2,r:3,k:4};
+
+const DEFAULT_FEEL = ['Bien','Pas bien','Pas bien du tout','Seul','Pas écouté','Colère','Triste','Épuisé','Soulagé'];
+const DEFAULT_ACTS = ['Critique','Mépris','Défensive','Mur','Colère','Insulte','A crié','S\'est excusé(e)','Tendresse'];
+const CAVALIERS = ['Critique','Mépris','Défensive','Mur'];
+const GRAVE = ['Mépris','Insulte'];
+
+const QUI = {elle:'Elle', moi:'Moi', deux:'Les deux'};
+const REPAIR = {oui:'Oui', partie:'En partie', non:'Non'};
+
+/* ---------- utils ---------- */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad2 = n => String(n).padStart(2,'0');
+const ymd = d => `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+const parseYmd = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); };
+const addDays = (s, n) => { const d = parseYmd(s); d.setDate(d.getDate()+n); return ymd(d); };
+const todayStr = () => ymd(new Date());
+const nowTime = () => { const d = new Date(); return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`; };
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+const JOURS = ['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'];
+const MOIS = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+const longDate = s => { const d = parseYmd(s); return `${cap(JOURS[d.getDay()])} ${d.getDate()} ${MOIS[d.getMonth()]}`; };
+const shortDate = s => { const d = parseYmd(s); return `${JOURS[d.getDay()].slice(0,3)}. ${d.getDate()} ${MOIS[d.getMonth()].slice(0,4)}.`; };
+const mondayOf = s => { const d = parseYmd(s); const wd = (d.getDay()+6)%7; d.setDate(d.getDate()-wd); return ymd(d); };
+function isoWeek(s){ const d = parseYmd(s); d.setHours(0,0,0,0); d.setDate(d.getDate()+3-((d.getDay()+6)%7)); const w1 = new Date(d.getFullYear(),0,4); return 1+Math.round(((d-w1)/86400000-3+((w1.getDay()+6)%7))/7); }
+const fmtRatio = r => r === null ? '—' : (r === Infinity ? '∞' : r.toFixed(1).replace('.', ','));
+
+const ICON = {
+  left:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>',
+  right:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>',
+  book:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></svg>',
+  black:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>',
+  stats:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/></svg>',
+  bilan:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/><path d="M8 13h8M8 17h5"/></svg>',
+  gear:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>',
+  close:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>'
+};
+
+/* ---------- storage (IndexedDB) ---------- */
+const DB = {
+  db:null,
+  open(){
+    return new Promise((res, rej) => {
+      const r = indexedDB.open('umoral', 1);
+      r.onupgradeneeded = () => {
+        const db = r.result;
+        db.createObjectStore('items', {keyPath:'id'});
+        db.createObjectStore('photos', {keyPath:'id'});
+        db.createObjectStore('kv', {keyPath:'k'});
+      };
+      r.onsuccess = () => { this.db = r.result; res(); };
+      r.onerror = () => rej(r.error);
+    });
+  },
+  tx(store, mode, fn){
+    return new Promise((res, rej) => {
+      const t = this.db.transaction(store, mode);
+      const s = t.objectStore(store);
+      let out;
+      const req = fn(s);
+      if (req) req.onsuccess = () => { out = req.result; };
+      t.oncomplete = () => res(out);
+      t.onerror = () => rej(t.error);
+    });
+  },
+  all(store){ return this.tx(store, 'readonly', s => s.getAll()); },
+  get(store, key){ return this.tx(store, 'readonly', s => s.get(key)); },
+  put(store, val){ return this.tx(store, 'readwrite', s => s.put(val)); },
+  del(store, key){ return this.tx(store, 'readwrite', s => s.delete(key)); },
+  clear(store){ return this.tx(store, 'readwrite', s => s.clear()); }
+};
+
+/* ---------- state ---------- */
+const S = {
+  items: [],            // entries (type:'e') and notes (type:'n')
+  settings: {pin:null, feel:[], acts:[], reminder:'21:00', alertSeen:''},
+  unlocked: false,
+  tab: 'livre',
+  day: todayStr(),
+  statsSeg: 'mois',
+  calMonth: todayStr().slice(0,7),
+  calFilter: new Set(),
+  bilanSeg: 'semaine',
+  photoUrls: {}
+};
+const entries = () => S.items.filter(i => i.type === 'e');
+const notes = () => S.items.filter(i => i.type === 'n');
+const byDay = d => S.items.filter(i => i.date === d).sort((a,b) => (a.time||'').localeCompare(b.time||'') || a.ts - b.ts);
+const feelTiles = () => [...DEFAULT_FEEL, ...S.settings.feel];
+const actTiles = () => [...DEFAULT_ACTS, ...S.settings.acts];
+
+async function saveItem(it){ const i = S.items.findIndex(x => x.id === it.id); if (i >= 0) S.items[i] = it; else S.items.push(it); await DB.put('items', it); }
+async function deleteItem(id){ const it = S.items.find(x => x.id === id); if (it && it.photos) for (const p of it.photos) await DB.del('photos', p); S.items = S.items.filter(x => x.id !== id); await DB.del('items', id); }
+async function saveSettings(){ await DB.put('kv', {k:'settings', v:S.settings}); }
+
+async function photoUrl(id){
+  if (S.photoUrls[id]) return S.photoUrls[id];
+  const p = await DB.get('photos', id);
+  if (!p) return '';
+  S.photoUrls[id] = URL.createObjectURL(p.blob);
+  return S.photoUrls[id];
+}
+async function fillPhotos(root){
+  for (const img of root.querySelectorAll('img[data-photo]')) img.src = await photoUrl(img.dataset.photo);
+}
+
+function toast(msg){ const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 2200); }
+
+/* ---------- stats helpers ---------- */
+function counts(list){
+  const c = {w:0,g:0,o:0,r:0,k:0};
+  list.forEach(e => { if (c[e.color] !== undefined) c[e.color]++; });
+  return c;
+}
+function ratioOf(c){
+  const pos = c.w*2 + c.g, neg = c.o + c.r*2;
+  if (!pos && !neg) return null;
+  if (!neg) return Infinity;
+  return pos/neg;
+}
+function inRange(list, from, to){ return list.filter(e => e.date >= from && e.date <= to); }
+function tagCounts(list, side){
+  const m = {};
+  list.forEach(e => { const o = e[side] || {}; Object.keys(o).forEach(k => { m[k] = (m[k]||0) + 1; }); });
+  return m;
+}
+function feelCounts(list){ const m = {}; list.forEach(e => (e.feel||[]).forEach(k => { m[k] = (m[k]||0)+1; })); return m; }
+function topN(m, n){ return Object.entries(m).sort((a,b) => b[1]-a[1]).slice(0,n); }
+
+function badStreak(){
+  // jours consécutifs (jusqu'à aujourd'hui ou hier) où le négatif l'emporte ou une noire
+  let streak = 0; let d = todayStr();
+  const isBad = day => { const l = entries().filter(e => e.date === day); if (!l.length) return null; const c = counts(l); return c.k > 0 || (c.o + c.r*2) > (c.w*2 + c.g); };
+  let first = isBad(d);
+  if (first === null) { d = addDays(d,-1); first = isBad(d); }
+  while (isBad(d) === true) { streak++; d = addDays(d,-1); }
+  return streak;
+}
+function careAlert(){
+  const t = todayStr();
+  const k7 = inRange(entries(), addDays(t,-6), t).filter(e => e.color === 'k').length;
+  const st = badStreak();
+  if (st >= 3) return `Ça fait ${st} jours que ça ne va pas. Pense à toi : appelle un pote, sors marcher, mange un truc chaud.`;
+  if (k7 >= 2) return `${k7} lignes franchies en une semaine. Ce n'est pas rien. Pense à toi.`;
+  return '';
+}
+
+/* ---------- PIN ---------- */
+async function hashPin(p){
+  try {
+    const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('umoral:' + p));
+    return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2,'0')).join('');
+  } catch(e) {
+    let h = 0; for (const ch of 'umoral:' + p) h = (h*31 + ch.charCodeAt(0)) | 0; return 'x' + h;
+  }
+}
+let pinBuf = '', pinStage = 'enter', pinFirst = '';
+function renderPin(msg){
+  const creating = !S.settings.pin;
+  const title = creating ? (pinStage === 'confirm' ? 'Confirme ton code' : 'Choisis un code à 4 chiffres') : 'Code Umoral';
+  $('#app').innerHTML = `<div class="pin">
+    <div style="font-size:26px;font-weight:700">Umoral</div>
+    <div class="sub" style="font-size:15px">${esc(title)}</div>
+    <div class="dots">${[0,1,2,3].map(i => `<i class="${i < pinBuf.length ? 'f' : ''}"></i>`).join('')}</div>
+    <div class="sub" style="min-height:18px;color:#F58A8E">${esc(msg||'')}</div>
+    <div class="pad">${[1,2,3,4,5,6,7,8,9].map(n => `<button data-k="${n}" aria-label="${n}">${n}</button>`).join('')}
+      <button class="blank" disabled aria-hidden="true"></button><button data-k="0" aria-label="0">0</button><button data-k="del" aria-label="Effacer" style="font-size:18px">⌫</button></div>
+  </div>`;
+  $('#app').querySelectorAll('.pad button[data-k]').forEach(b => b.onclick = () => pinKey(b.dataset.k));
+}
+async function pinKey(k){
+  if (k === 'del') { pinBuf = pinBuf.slice(0,-1); return renderPin(); }
+  if (pinBuf.length >= 4) return;
+  pinBuf += k; renderPin();
+  if (pinBuf.length < 4) return;
+  const creating = !S.settings.pin;
+  if (creating) {
+    if (pinStage !== 'confirm') { pinFirst = pinBuf; pinBuf = ''; pinStage = 'confirm'; return setTimeout(renderPin, 150); }
+    if (pinBuf !== pinFirst) { pinBuf = ''; pinStage = 'enter'; pinFirst = ''; return setTimeout(() => renderPin('Les deux codes ne sont pas pareils, recommence.'), 150); }
+    S.settings.pin = await hashPin(pinBuf); await saveSettings();
+    S.unlocked = true; pinBuf = ''; return render();
+  }
+  if (await hashPin(pinBuf) === S.settings.pin) { S.unlocked = true; pinBuf = ''; S.day = todayStr(); render(); }
+  else { pinBuf = ''; setTimeout(() => renderPin('Mauvais code'), 150); }
+}
+
+/* ---------- shell ---------- */
+function render(){
+  if (!S.unlocked) return renderPin();
+  const tabs = [['livre','Livre',ICON.book],['noires','Noires',ICON.black],['stats','Stats',ICON.stats],['bilans','Bilans',ICON.bilan]];
+  $('#app').innerHTML = `<main id="main"></main>
+  <nav class="tabs" aria-label="Navigation">${tabs.map(([k,l,i]) => `<button data-tab="${k}" class="${S.tab===k?'on':''}" ${S.tab===k?'aria-current="page"':''}>${i}${l}</button>`).join('')}</nav>`;
+  $('#app').querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { S.tab = b.dataset.tab; if (S.tab === 'livre') S.day = todayStr(); render(); });
+  const m = $('#main');
+  ({livre:renderLivre, noires:renderNoires, stats:renderStats, bilans:renderBilans, reglages:renderReglages}[S.tab] || renderLivre)(m);
+}
+
+/* ---------- LIVRE ---------- */
+function entryLine(e){
+  const parts = [e.time];
+  if (e.qui) parts.push(QUI[e.qui]);
+  const tags = [...Object.keys(e.elle||{}).map(t => 'Elle : ' + t), ...Object.keys(e.moi||{}).map(t => 'Moi : ' + t)];
+  if (e.air) tags.push("J'ai pris l'air");
+  const ph = (e.photos||[]).length;
+  const txt = e.what || (e.feel && e.feel.length ? e.feel.join(', ') : '');
+  return `<button class="item" data-entry="${e.id}">
+    <span class="dot c-${e.color}" style="margin-top:3px"></span>
+    <span style="flex:1;min-width:0">
+      <span class="between meta"><span>${esc(parts.join(' · '))}</span><span>${ph ? ph + ' photo' + (ph>1?'s':'') : ''}</span></span>
+      ${tags.length ? `<span class="meta" style="display:block;margin-top:2px">${esc(tags.join(' · '))}</span>` : ''}
+      <span class="txt ${txt ? '' : 'empty'}" style="display:block">${txt ? esc(txt) : 'À compléter : touche pour écrire'}</span>
+      ${e.repair ? `<span class="meta" style="display:block;margin-top:4px">Réparé : ${esc(REPAIR[e.repair])}</span>` : ''}
+    </span></button>`;
+}
+function renderLivre(m){
+  const t = todayStr();
+  const d = S.day;
+  const list = byDay(d);
+  const ents = list.filter(i => i.type === 'e');
+  const nts = list.filter(i => i.type === 'n');
+  // réparations à demander : rouges/noires des 3 jours précédents sans réponse (seulement sur la page d'aujourd'hui)
+  const toRepair = d === t ? entries().filter(e => (e.color === 'r' || e.color === 'k') && !e.repair && e.date < t && e.date >= addDays(t,-3)).sort((a,b) => (a.date+a.time).localeCompare(b.date+b.time)) : [];
+  const alert = d === t ? careAlert() : '';
+  m.innerHTML = `
+  <div class="between">
+    <button class="iconbtn" id="prev" aria-label="Jour précédent">${ICON.left}</button>
+    <div style="text-align:center">
+      <div class="sub" style="text-transform:uppercase;letter-spacing:.08em;font-size:12px">${d === t ? "Aujourd'hui" : (d === addDays(t,-1) ? 'Hier' : '&nbsp;')}</div>
+      <div style="font-size:20px;font-weight:700">${esc(longDate(d))}</div>
+    </div>
+    <div class="row" style="gap:6px">
+      <button class="iconbtn" id="next" aria-label="Jour suivant" ${d >= t ? 'disabled' : ''}>${ICON.right}</button>
+    </div>
+  </div>
+  ${d !== t ? `<button class="btn block" id="gotoday" style="margin-top:10px">Revenir à aujourd'hui</button>` : ''}
+  ${alert ? `<div class="banner"><strong>${esc(alert)}</strong></div>` : ''}
+  <section class="card" aria-label="Ajouter un moment">
+    <div class="between" style="margin-bottom:10px"><span class="sub">Ajouter un moment</span><button class="iconbtn" id="settings" aria-label="Réglages" style="width:36px;height:36px;border:none;background:none">${ICON.gear}</button></div>
+    <div class="pastilles">${ORDER.map(c => `<button class="pbtn c-${c}" data-new="${c}" aria-label="Pastille ${COLORS[c].name.toLowerCase()} : ${COLORS[c].label}"></button>`).join('')}</div>
+  </section>
+  ${toRepair.map(e => `<div class="banner">
+    <div>${esc(shortDate(e.date))}, moment ${e.color === 'k' ? 'noir' : 'rouge'} à ${esc(e.time)}${e.what ? ' : « ' + esc(e.what.slice(0,60)) + (e.what.length>60?'…':'') + ' »' : ''}. <strong>Ça s'est réparé ?</strong></div>
+    <div class="three">${Object.entries(REPAIR).map(([k,l]) => `<button data-repair="${e.id}" data-v="${k}">${l}</button>`).join('')}</div>
+  </div>`).join('')}
+  <section class="card" aria-label="Moments">
+    <div class="sub">Moments${ents.length ? ' (' + ents.length + ')' : ''}</div>
+    ${ents.length ? ents.map(entryLine).join('') : `<div class="empty" style="padding:12px 0">Rien de noté pour l'instant.</div>`}
+  </section>
+  <section class="card" aria-label="Notes">
+    <div class="between"><span class="sub">Notes</span></div>
+    ${nts.map(n => `<button class="item" data-note="${n.id}"><span class="meta" style="min-width:44px">${esc(n.time)}</span><span class="txt" style="margin:0;flex:1">${esc(n.text)}</span></button>`).join('')}
+    <div style="margin-top:10px">
+      <textarea id="newnote" rows="2" placeholder="Écris ce que tu as sur le cœur…"></textarea>
+      <button class="btn block" id="addnote" style="margin-top:8px">Ajouter la note</button>
+    </div>
+  </section>`;
+  $('#prev').onclick = () => { S.day = addDays(d,-1); render(); };
+  $('#next').onclick = () => { if (d < t) { S.day = addDays(d,1); render(); } };
+  if ($('#gotoday')) $('#gotoday').onclick = () => { S.day = t; render(); };
+  $('#settings').onclick = () => { S.tab = 'reglages'; render(); };
+  m.querySelectorAll('[data-new]').forEach(b => b.onclick = () => openEntry(null, b.dataset.new));
+  m.querySelectorAll('[data-entry]').forEach(b => b.onclick = () => openEntry(b.dataset.entry));
+  m.querySelectorAll('[data-repair]').forEach(b => b.onclick = async () => { const e = S.items.find(x => x.id === b.dataset.repair); e.repair = b.dataset.v; await saveItem(e); toast('Noté'); render(); });
+  m.querySelectorAll('[data-note]').forEach(b => b.onclick = () => openNote(b.dataset.note));
+  $('#addnote').onclick = async () => {
+    const v = $('#newnote').value.trim(); if (!v) return;
+    await saveItem({id:uid(), type:'n', date:d, time: d === t ? nowTime() : '—', ts:Date.now(), text:v});
+    render();
+  };
+  // balayage gauche/droite pour tourner les pages
+  let sx = null;
+  m.ontouchstart = ev => { sx = ev.touches[0].clientX; };
+  m.ontouchend = ev => { if (sx === null) return; const dx = ev.changedTouches[0].clientX - sx; sx = null;
+    if (Math.abs(dx) < 80 || document.querySelector('.overlay')) return;
+    if (dx > 0) { S.day = addDays(d,-1); render(); } else if (d < t) { S.day = addDays(d,1); render(); } };
+}
+
+/* ---------- note editor ---------- */
+function openNote(id){
+  const n = S.items.find(x => x.id === id);
+  const ov = sheet(`<div class="between"><div style="font-size:18px;font-weight:700">Note · ${esc(n.time)}</div><button class="iconbtn" data-close aria-label="Fermer">${ICON.close}</button></div>`,
+    `<label class="q" for="nt">Texte</label><textarea id="nt" rows="6">${esc(n.text)}</textarea>`,
+    `<button class="btn danger" id="ndel">Supprimer</button><button class="btn primary" id="nok" style="flex:1">Valider</button>`,
+    () => ov.querySelector('#nt').value.trim() !== n.text);
+  ov.querySelector('#nok').onclick = async () => { n.text = ov.querySelector('#nt').value.trim(); if (n.text) await saveItem(n); else await deleteItem(n.id); ov.remove(); render(); };
+  ov.querySelector('#ndel').onclick = async () => { if (confirm('Supprimer cette note ?')) { await deleteItem(n.id); ov.remove(); render(); } };
+}
+
+/* ---------- sheet helper ---------- */
+function sheet(head, body, foot, isDirty){
+  const ov = document.createElement('div');
+  ov.className = 'overlay';
+  ov.innerHTML = `<div class="sheet" role="dialog" aria-modal="true"><div class="head"><div class="grab"></div>${head}</div><div class="body">${body}</div><div class="foot">${foot}</div></div>`;
+  document.body.appendChild(ov);
+  // fermer sans valider : on demande confirmation si quelque chose a été écrit
+  ov.tryClose = () => { if (!isDirty || !isDirty() || confirm('Fermer sans enregistrer ? Ce que tu viens d\'écrire sera perdu.')) ov.remove(); };
+  ov.addEventListener('click', ev => { if (ev.target === ov) ov.tryClose(); });
+  ov.querySelectorAll('[data-close]').forEach(b => b.onclick = () => ov.tryClose());
+  return ov;
+}
+
+/* ---------- ENTRY editor (pastille ouverte) ---------- */
+function openEntry(id, color){
+  const isNew = !id;
+  const src = isNew ? {id:uid(), type:'e', date:S.day, time: S.day === todayStr() ? nowTime() : '12:00', ts:Date.now(), color, qui:'', what:'', need:'', feel:[], moi:{}, elle:{}, air:false, photos:[], repair:null}
+                    : JSON.parse(JSON.stringify(S.items.find(x => x.id === id)));
+  const e = src;
+  e.moi = e.moi || {}; e.elle = e.elle || {}; e.feel = e.feel || []; e.photos = e.photos || [];
+  let suggestionDismissed = false;
+  const removedPhotos = [];
+  const newPhotos = []; // {id, blob}
+
+  const original = JSON.stringify(e);
+  const ov = sheet('', '', '', () => { syncText(); return JSON.stringify(e) !== original || newPhotos.length > 0 || removedPhotos.length > 0; });
+  const headEl = ov.querySelector('.head');
+  const bodyEl = ov.querySelector('.body');
+  const footEl = ov.querySelector('.foot');
+
+  function sideHTML(side, title){
+    const sel = e[side];
+    return `<div class="side"><h3>${title}</h3>
+      <div class="chips">${actTiles().map(t => `<button class="chip ${t in sel ? 'on' : ''}" data-side="${side}" data-tile="${esc(t)}" aria-pressed="${t in sel}">${esc(t)}</button>`).join('')}
+      <button class="chip add" data-addact="${side}">+ Ma tuile</button></div>
+      ${Object.keys(sel).length ? `<div class="annot">${Object.keys(sel).map(t => `<div class="a"><span>${esc(t)}</span><input type="text" data-annot="${side}" data-tile="${esc(t)}" value="${esc(sel[t])}" placeholder="Petite précision…"></div>`).join('')}</div>` : ''}
+    </div>`;
+  }
+  function needsSuggestion(){
+    if (suggestionDismissed) return false;
+    if (RANK[e.color] >= RANK.r) return false;
+    return GRAVE.some(g => g in e.elle || g in e.moi);
+  }
+  function draw(){
+    const keepScroll = bodyEl.scrollTop;
+    headEl.innerHTML = `<div class="grab"></div><div class="row">
+      <span class="dot c-${e.color}" style="width:28px;height:28px;border-radius:14px"></span>
+      <div style="flex:1"><div style="font-size:18px;font-weight:700">Moment ${COLORS[e.color].name.toLowerCase()}</div>
+      <div class="sub">${esc(COLORS[e.color].label)} · ${esc(shortDate(e.date))} · <input type="time" id="etime" value="${esc(e.time)}" aria-label="Heure" style="width:auto;padding:2px 6px;font-size:13px;border-radius:6px"></div></div>
+      <button class="iconbtn" data-close aria-label="Fermer">${ICON.close}</button></div>`;
+    bodyEl.innerHTML = `
+      ${needsSuggestion() ? `<div class="banner warn"><strong>${esc(GRAVE.find(g => g in e.elle || g in e.moi))}, c'est sérieux.</strong> Ce serait plutôt une pastille rouge ? C'est toi qui choisis.
+        <div class="three"><button id="sugRed" style="border:none;background:var(--r);color:#1A0B0B;font-weight:700">Passer en rouge</button><button id="sugKeep" style="border-color:#6B4A1A">Garder</button></div></div>` : ''}
+      <label class="q" for="ewhat">Qu'est-ce qui s'est passé ?</label>
+      <textarea id="ewhat" rows="3" placeholder="Facultatif">${esc(e.what)}</textarea>
+      <div class="q">Comment te sens-tu ?</div>
+      <div class="chips">${feelTiles().map(t => `<button class="chip ${e.feel.includes(t) ? 'on' : ''}" data-feel="${esc(t)}" aria-pressed="${e.feel.includes(t)}">${esc(t)}</button>`).join('')}
+        <button class="chip add" id="addfeel">+ Ma tuile</button></div>
+      <div class="q">Qui ?</div>
+      <div class="three" style="margin-top:0">${Object.entries(QUI).map(([k,l]) => `<button data-qui="${k}" style="${e.qui===k ? 'border-color:var(--accent);background:var(--accent-bg);font-weight:600' : 'border-color:var(--border)'}" aria-pressed="${e.qui===k}">${l}</button>`).join('')}</div>
+      <div class="q" style="margin-bottom:0">Ce qui s'est joué <span class="sub" style="font-weight:400">(touche, puis précise si tu veux)</span></div>
+      ${sideHTML('elle','Elle')}
+      ${sideHTML('moi','Moi')}
+      <div class="chips" style="margin-top:10px"><button class="chip ${e.air ? 'on' : ''}" id="air" aria-pressed="${e.air}">J'ai pris l'air</button></div>
+      <label class="q" for="eneed">De quoi tu aurais eu besoin ?</label>
+      <textarea id="eneed" rows="2" placeholder="Facultatif">${esc(e.need)}</textarea>
+      <div class="q">Photos</div>
+      <div class="photos" id="eph">${e.photos.map(p => `<div class="ph"><img data-photo="${p}" alt="Photo jointe"><button data-rmph="${p}" aria-label="Retirer la photo">×</button></div>`).join('')}
+        ${newPhotos.map(p => `<div class="ph"><img src="${p.url || (p.url = URL.createObjectURL(p.blob))}" alt="Photo jointe"><button data-rmnew="${p.id}" aria-label="Retirer la photo">×</button></div>`).join('')}
+        <button class="ph" id="addph" style="border:1px dashed var(--dim);color:var(--muted);font-size:28px" aria-label="Joindre une photo">+</button></div>
+      ${!isNew ? `<div class="q">Changer la couleur</div><div class="pastilles">${ORDER.map(c => `<button class="pbtn c-${c}" data-recolor="${c}" style="width:44px;height:44px;${c===e.color ? 'outline:3px solid var(--accent);outline-offset:3px' : ''}" aria-label="Passer en ${COLORS[c].name.toLowerCase()}"></button>`).join('')}</div>` : ''}
+      ${!isNew && (e.color === 'r' || e.color === 'k') ? `<div class="q">Ça s'est réparé ?</div><div class="three" style="margin-top:0">${Object.entries(REPAIR).map(([k,l]) => `<button data-rep="${k}" style="${e.repair===k ? 'border-color:var(--accent);background:var(--accent-bg);font-weight:600' : 'border-color:var(--border)'}">${l}</button>`).join('')}</div>` : ''}
+    `;
+    footEl.innerHTML = `${!isNew ? '<button class="btn danger" id="edel">Supprimer</button>' : ''}<button class="btn primary" id="eok" style="flex:1">Valider</button>`;
+    bodyEl.scrollTop = keepScroll;
+    fillPhotos(bodyEl);
+    bind();
+  }
+  function syncText(){
+    const w = ov.querySelector('#ewhat'), n = ov.querySelector('#eneed'), tm = ov.querySelector('#etime');
+    if (w) e.what = w.value; if (n) e.need = n.value; if (tm && tm.value) e.time = tm.value;
+    ov.querySelectorAll('[data-annot]').forEach(i => { e[i.dataset.annot][i.dataset.tile] = i.value; });
+  }
+  function bind(){
+    ov.querySelectorAll('[data-close]').forEach(b => b.onclick = () => ov.tryClose());
+    ov.querySelectorAll('[data-feel]').forEach(b => b.onclick = () => { syncText(); const t = b.dataset.feel; e.feel = e.feel.includes(t) ? e.feel.filter(x => x !== t) : [...e.feel, t]; draw(); });
+    ov.querySelectorAll('[data-qui]').forEach(b => b.onclick = () => { syncText(); e.qui = e.qui === b.dataset.qui ? '' : b.dataset.qui; draw(); });
+    ov.querySelectorAll('[data-side]').forEach(b => b.onclick = () => { syncText(); const s = e[b.dataset.side], t = b.dataset.tile; if (t in s) delete s[t]; else s[t] = ''; draw(); });
+    ov.querySelectorAll('[data-addact]').forEach(b => b.onclick = async () => { syncText(); const v = (prompt('Nom de ta tuile (pour Elle et Moi) :') || '').trim(); if (v && !actTiles().includes(v)) { S.settings.acts.push(v); await saveSettings(); } if (v) e[b.dataset.addact][v] = e[b.dataset.addact][v] || ''; draw(); });
+    const af = ov.querySelector('#addfeel'); if (af) af.onclick = async () => { syncText(); const v = (prompt('Nom de ta tuile (ressenti) :') || '').trim(); if (v && !feelTiles().includes(v)) { S.settings.feel.push(v); await saveSettings(); } if (v && !e.feel.includes(v)) e.feel.push(v); draw(); };
+    const air = ov.querySelector('#air'); if (air) air.onclick = () => { syncText(); e.air = !e.air; draw(); };
+    const sr = ov.querySelector('#sugRed'); if (sr) sr.onclick = () => { syncText(); e.color = 'r'; draw(); };
+    const sk = ov.querySelector('#sugKeep'); if (sk) sk.onclick = () => { syncText(); suggestionDismissed = true; draw(); };
+    ov.querySelectorAll('[data-recolor]').forEach(b => b.onclick = () => { syncText(); e.color = b.dataset.recolor; suggestionDismissed = false; draw(); });
+    ov.querySelectorAll('[data-rep]').forEach(b => b.onclick = () => { syncText(); e.repair = e.repair === b.dataset.rep ? null : b.dataset.rep; draw(); });
+    ov.querySelectorAll('[data-rmph]').forEach(b => b.onclick = () => { syncText(); removedPhotos.push(b.dataset.rmph); e.photos = e.photos.filter(p => p !== b.dataset.rmph); draw(); });
+    ov.querySelectorAll('[data-rmnew]').forEach(b => b.onclick = () => { syncText(); const i = newPhotos.findIndex(p => p.id === b.dataset.rmnew); newPhotos.splice(i,1); draw(); });
+    const ap = ov.querySelector('#addph'); if (ap) ap.onclick = () => {
+      syncText();
+      const inp = $('#photoInput'); inp.value = '';
+      inp.onchange = async () => { for (const f of inp.files) newPhotos.push({id:uid(), blob: await shrink(f)}); draw(); };
+      inp.click();
+    };
+    ov.querySelector('#eok').onclick = async () => {
+      syncText();
+      Object.keys(e.elle).forEach(k => e.elle[k] = (e.elle[k]||'').trim());
+      Object.keys(e.moi).forEach(k => e.moi[k] = (e.moi[k]||'').trim());
+      e.what = e.what.trim(); e.need = e.need.trim();
+      for (const p of newPhotos) { await DB.put('photos', {id:p.id, blob:p.blob}); e.photos.push(p.id); }
+      for (const p of removedPhotos) await DB.del('photos', p);
+      await saveItem(e);
+      ov.remove(); toast('Moment enregistré'); render();
+    };
+    const del = ov.querySelector('#edel'); if (del) del.onclick = async () => { if (confirm('Supprimer ce moment ? Ce sera définitif.')) { await deleteItem(e.id); ov.remove(); render(); } };
+  }
+  draw();
+}
+
+/* réduit les photos pour ne pas remplir le téléphone */
+function shrink(file){
+  return new Promise(res => {
+    const img = new Image(); const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const max = 1600; let {width:w, height:h} = img;
+      if (w <= max && h <= max) { URL.revokeObjectURL(url); return res(file); }
+      const s = max / Math.max(w,h); w = Math.round(w*s); h = Math.round(h*s);
+      const c = document.createElement('canvas'); c.width = w; c.height = h;
+      c.getContext('2d').drawImage(img, 0, 0, w, h);
+      c.toBlob(b => { URL.revokeObjectURL(url); res(b || file); }, 'image/jpeg', 0.85);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); res(file); };
+    img.src = url;
+  });
+}
+
+/* ---------- NOIRES ---------- */
+function renderNoires(m){
+  const list = entries().filter(e => e.color === 'k').sort((a,b) => (b.date+b.time).localeCompare(a.date+a.time));
+  const month = todayStr().slice(0,7);
+  const nMonth = list.filter(e => e.date.startsWith(month)).length;
+  const repCol = {oui:'var(--g)', partie:'var(--o)', non:'var(--r)'};
+  m.innerHTML = `<h1>Les noires</h1>
+  <div class="sub">Les fois où c'est allé trop loin · ${nMonth} ce mois · ${list.length} en tout</div>
+  ${list.length ? list.map(e => {
+    const tags = [...Object.entries(e.elle||{}).map(([k,v]) => 'Elle : ' + k + (v ? ' (' + v + ')' : '')), ...Object.entries(e.moi||{}).map(([k,v]) => 'Moi : ' + k + (v ? ' (' + v + ')' : ''))];
+    return `<button class="card item" data-entry="${e.id}" style="display:block;border:1px solid var(--border);border-radius:16px;padding:14px">
+      <span class="between"><span class="row"><span class="dot c-k" style="width:14px;height:14px"></span><span class="meta">${esc(shortDate(e.date))} · ${esc(e.time)}${e.qui ? ' · ' + esc(QUI[e.qui]) : ''}</span></span>
+      <span style="font-size:12px;font-weight:600;color:${e.repair ? repCol[e.repair] : 'var(--muted)'}">${e.repair ? 'Réparé : ' + esc(REPAIR[e.repair]) : 'Réparation ?'}</span></span>
+      <span class="txt" style="display:block;margin-top:8px">${e.what ? esc(e.what) : '<span class="empty">Pas de texte</span>'}</span>
+      ${tags.length ? `<span class="meta" style="display:block;margin-top:8px">${esc(tags.join(' · '))}</span>` : ''}
+      ${(e.photos||[]).length ? `<span class="meta" style="display:block;margin-top:4px">${e.photos.length} photo(s)</span>` : ''}
+    </button>`; }).join('') : `<div class="card empty">Aucune noire pour l'instant.</div>`}`;
+  m.querySelectorAll('[data-entry]').forEach(b => b.onclick = () => { const e = S.items.find(x => x.id === b.dataset.entry); S.day = e.date; openEntry(e.id); });
+}
+
+/* ---------- STATS ---------- */
+function renderStats(m){
+  m.innerHTML = `<h1>Stats</h1>
+  <div class="seg" role="tablist"><button role="tab" data-seg="mois" class="${S.statsSeg==='mois'?'on':''}">Mois</button><button role="tab" data-seg="resume" class="${S.statsSeg==='resume'?'on':''}">Résumé</button></div>
+  <div id="statsBody"></div>`;
+  m.querySelectorAll('[data-seg]').forEach(b => b.onclick = () => { S.statsSeg = b.dataset.seg; render(); });
+  const body = $('#statsBody');
+  const [y, mo] = S.calMonth.split('-').map(Number);
+  const first = new Date(y, mo-1, 1), last = new Date(y, mo, 0);
+  const from = ymd(first), to = ymd(last);
+  const monthNav = `<div class="between" style="margin-top:12px">
+    <button class="iconbtn" id="mprev" aria-label="Mois précédent">${ICON.left}</button>
+    <div style="font-size:16px;font-weight:600">${cap(MOIS[mo-1])} ${y}</div>
+    <button class="iconbtn" id="mnext" aria-label="Mois suivant" ${S.calMonth >= todayStr().slice(0,7) ? 'disabled' : ''}>${ICON.right}</button></div>`;
+  const shiftMonth = n => { const d = new Date(y, mo-1+n, 1); S.calMonth = `${d.getFullYear()}-${pad2(d.getMonth()+1)}`; render(); };
+  if (S.statsSeg === 'mois') {
+    const t = todayStr();
+    const f = S.calFilter;
+    const lead = (first.getDay()+6)%7;
+    let cells = '';
+    for (let i = 0; i < lead; i++) cells += '<div></div>';
+    for (let n = 1; n <= last.getDate(); n++) {
+      const ds = `${S.calMonth}-${pad2(n)}`;
+      const es = entries().filter(e => e.date === ds).sort((a,b) => a.time.localeCompare(b.time));
+      const shown = f.size ? es.filter(e => f.has(e.color)) : es;
+      const faded = f.size && !shown.length;
+      cells += `<button class="day ${ds===t?'today':''} ${ds>t?'fut':''} ${faded?'faded':''}" data-day="${ds}" ${ds>t?'disabled':''} aria-label="${n} ${MOIS[mo-1]}, ${es.length} moment(s)">
+        <span class="n">${n}</span><span class="ds">${shown.slice(0,8).map(e => `<span class="dot sm c-${e.color}"></span>`).join('')}</span></button>`;
+    }
+    body.innerHTML = `${monthNav}
+    <div class="chips" style="margin:6px 0 10px" aria-label="Filtrer par couleur">
+      <button class="chip ${f.size?'':'on'}" data-filter="all">Tout</button>
+      ${ORDER.map(c => `<button class="chip ${f.has(c)?'on':''}" data-filter="${c}" aria-label="Filtrer ${COLORS[c].name.toLowerCase()}s" aria-pressed="${f.has(c)}" style="width:40px;padding:0;display:flex;align-items:center;justify-content:center"><span class="dot c-${c}" style="width:14px;height:14px"></span></button>`).join('')}
+    </div>
+    <div class="cal">${['L','M','M','J','V','S','D'].map(x => `<div class="h">${x}</div>`).join('')}${cells}</div>
+    <small class="hint">Touche un jour pour ouvrir sa page.</small>`;
+    body.querySelectorAll('[data-filter]').forEach(b => b.onclick = () => { const v = b.dataset.filter; if (v === 'all') f.clear(); else if (f.has(v)) f.delete(v); else f.add(v); render(); });
+    body.querySelectorAll('[data-day]').forEach(b => b.onclick = () => { S.day = b.dataset.day; S.tab = 'livre'; render(); });
+  } else {
+    const list = inRange(entries(), from, to);
+    const c = counts(list);
+    const r = ratioOf(c);
+    const elle = tagCounts(list, 'elle'), moi = tagCounts(list, 'moi');
+    const qui = {elle:0, moi:0, deux:0}; list.forEach(e => { if (e.qui) qui[e.qui]++; });
+    const rep = {oui:0, partie:0, non:0}; list.filter(e => e.repair).forEach(e => rep[e.repair]++);
+    const air = list.filter(e => e.air).length;
+    const maxCav = Math.max(1, ...CAVALIERS.map(k => (elle[k]||0) + (moi[k]||0)));
+    const rColor = r === null ? 'var(--dim)' : (r >= 5 ? 'var(--g)' : r >= 1 ? 'var(--o)' : 'var(--r)');
+    body.innerHTML = `${monthNav}
+    <div class="grid2" style="margin-top:12px">
+      <div class="card"><div class="sub">Bons / mauvais moments</div><div class="stat">${fmtRatio(r)} <span style="font-size:14px;font-weight:500;color:var(--muted)">pour 1</span></div>
+        <div class="bar" style="margin-top:8px"><i style="width:${r === null ? 0 : Math.min(100, (r === Infinity ? 5 : r)/5*100)}%;background:${rColor}"></i></div>
+        <small class="hint">Repère d'un couple stable : 5 pour 1 (Gottman)</small></div>
+      <div class="card"><div class="sub">Lignes franchies</div><div class="stat row"><span class="dot c-k" style="width:14px;height:14px"></span>${c.k}</div><small class="hint">Ce mois · jamais compensées</small></div>
+    </div>
+    <div class="card"><div class="sub" style="margin-bottom:8px">Moments par semaine</div>${weekChart(from, to)}</div>
+    <div class="card"><div class="sub" style="margin-bottom:10px">Ce qui s'est joué (Elle / Moi)</div>
+      <div class="bars">${CAVALIERS.map(k => { const a = elle[k]||0, b = moi[k]||0; return `<span style="${k==='Mépris'?'font-weight:700':''}">${k}</span><div class="bar"><i style="width:${(a+b)/maxCav*100}%;background:${k==='Mépris'?'var(--r)':'var(--o)'}"></i></div><span>${a}/${b}</span>`; }).join('')}</div>
+      ${topList('Autres chez elle', elle)}${topList('Autres chez moi', moi)}
+      <small class="hint">Le mépris est le signe le plus grave d'après les recherches de Gottman.</small></div>
+    <div class="grid2" style="margin-top:12px">
+      <div class="card"><div class="sub">Qui ?</div><div style="font-size:14px;margin-top:6px;line-height:1.7">Elle ${qui.elle} · Moi ${qui.moi}<br>Les deux ${qui.deux}</div></div>
+      <div class="card"><div class="sub">Réparé ?</div><div style="font-size:14px;margin-top:6px;line-height:1.7">Oui ${rep.oui} · En partie ${rep.partie}<br>Non ${rep.non}</div></div>
+    </div>
+    <div class="card"><div class="sub">Ressentis les plus fréquents</div><div style="font-size:14px;margin-top:6px;line-height:1.6">${topN(feelCounts(list),5).map(([k,v]) => esc(k) + ' ' + v).join(' · ') || '<span class="empty">Rien encore</span>'}</div>
+      <small class="hint">« J'ai pris l'air » : ${air} fois</small></div>`;
+    function topList(title, m2){ const o = topN(Object.fromEntries(Object.entries(m2).filter(([k]) => !CAVALIERS.includes(k))), 4); return o.length ? `<div style="font-size:13px;margin-top:10px"><span class="sub">${title} : </span>${o.map(([k,v]) => esc(k) + ' ' + v).join(' · ')}</div>` : ''; }
+  }
+  $('#mprev').onclick = () => shiftMonth(-1);
+  $('#mnext').onclick = () => { if (S.calMonth < todayStr().slice(0,7)) shiftMonth(1); };
+}
+
+/* graphique en colonnes empilées par semaine, chiffres à gauche */
+function weekChart(from, to){
+  const weeks = [];
+  let w = mondayOf(from);
+  while (w <= to) { weeks.push(w); w = addDays(w, 7); }
+  const data = weeks.map(ws => { const c = counts(inRange(entries(), ws < from ? from : ws, addDays(ws,6) > to ? to : addDays(ws,6))); return {ws, c, total: ORDER.reduce((s,k) => s + c[k], 0)}; });
+  const max = Math.max(4, ...data.map(d => d.total));
+  const step = Math.ceil(max / 4);
+  const top = step * 4;
+  const W = 320, H = 170, left = 30, bottom = 22, plotH = H - bottom - 8, plotW = W - left - 4;
+  const bw = Math.min(40, plotW / data.length - 12);
+  const colMap = {w:'#F4F4F5', g:'#34C77B', o:'#F5A524', r:'#F2555A', k:'#000000'};
+  let svg = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Nombre de moments par couleur, semaine par semaine">`;
+  for (let i = 0; i <= 4; i++) {
+    const v = step * i, yy = 8 + plotH - (v/top)*plotH;
+    svg += `<line x1="${left}" y1="${yy}" x2="${W}" y2="${yy}" stroke="#2C2C33" stroke-width="1"/><text x="${left-6}" y="${yy+4}" fill="#A3A3AD" font-size="10" text-anchor="end">${v}</text>`;
+  }
+  data.forEach((d, i) => {
+    const cx = left + (plotW / data.length) * (i + 0.5);
+    let y0 = 8 + plotH;
+    ['k','r','o','g','w'].forEach(k => {
+      const h = (d.c[k] / top) * plotH; if (!h) return;
+      y0 -= h;
+      svg += `<rect x="${cx - bw/2}" y="${y0}" width="${bw}" height="${h}" fill="${colMap[k]}" ${k==='k' ? 'stroke="#8A8A94" stroke-width="1"' : ''}/>`;
+    });
+    svg += `<text x="${cx}" y="${H-6}" fill="#A3A3AD" font-size="10" text-anchor="middle">S${isoWeek(d.ws)}</text>`;
+  });
+  svg += '</svg>';
+  return svg;
+}
+
+/* ---------- BILANS ---------- */
+function periodsWeeks(){
+  const t = todayStr(); const out = [];
+  const firstDate = entries().concat(notes()).map(e => e.date).sort()[0] || t;
+  let w = mondayOf(t);
+  while (w >= mondayOf(firstDate) && out.length < 26) { out.push({from:w, to:addDays(w,6), label:`Semaine ${isoWeek(w)} · du ${parseYmd(w).getDate()} ${MOIS[parseYmd(w).getMonth()]} au ${parseYmd(addDays(w,6)).getDate()} ${MOIS[parseYmd(addDays(w,6)).getMonth()]}`}); w = addDays(w,-7); }
+  return out;
+}
+function periodsMonths(){
+  const t = todayStr(); const out = [];
+  const firstDate = entries().concat(notes()).map(e => e.date).sort()[0] || t;
+  let d = new Date(parseYmd(t).getFullYear(), parseYmd(t).getMonth(), 1);
+  while (ymd(d).slice(0,7) >= firstDate.slice(0,7) && out.length < 24) {
+    const from = ymd(d), to = ymd(new Date(d.getFullYear(), d.getMonth()+1, 0));
+    out.push({from, to, label:`${cap(MOIS[d.getMonth()])} ${d.getFullYear()}`});
+    d = new Date(d.getFullYear(), d.getMonth()-1, 1);
+  }
+  return out;
+}
+function summaryText(from, to, kind){
+  const list = inRange(entries(), from, to);
+  if (!list.length) return "Rien de noté sur cette période.";
+  const c = counts(list); const r = ratioOf(c);
+  const good = c.w + c.g, bad = c.o + c.r;
+  const lines = [];
+  lines.push(`${good} bon${good>1?'s':''} moment${good>1?'s':''}${c.w ? ' (dont ' + c.w + ' parfait' + (c.w>1?'s':'') + ')' : ''}, ${bad} difficile${bad>1?'s':''}, ${c.k} ligne${c.k>1?'s':''} franchie${c.k>1?'s':''}.`);
+  if (r !== null) lines.push(r === Infinity ? 'Aucun moment difficile : ratio parfait.' : `Ratio de ${fmtRatio(r)} pour 1, ${r >= 5 ? 'au niveau d\'un couple stable' : r >= 1 ? 'en dessous du repère de 5 pour 1' : 'les mauvais moments dominent'}.`);
+  const elle = tagCounts(list,'elle'), moi = tagCounts(list,'moi');
+  const te = topN(elle,2), tm = topN(moi,2);
+  if (te.length) lines.push(`Chez elle, surtout : ${te.map(([k,v]) => k.toLowerCase() + ' (' + v + ')').join(', ')}.`);
+  if (tm.length) lines.push(`Chez toi : ${tm.map(([k,v]) => k.toLowerCase() + ' (' + v + ')').join(', ')}.`);
+  if ((elle['Mépris']||0) + (moi['Mépris']||0) >= 2) lines.push('Le mépris est revenu plusieurs fois : c\'est le signal le plus sérieux.');
+  const reps = list.filter(e => e.color === 'r' || e.color === 'k');
+  if (reps.length) { const ok = reps.filter(e => e.repair === 'oui').length, part = reps.filter(e => e.repair === 'partie').length; lines.push(`Réparations : ${ok} sur ${reps.length} réparé${ok>1?'s':''}${part ? ', ' + part + ' en partie' : ''}.`); }
+  const fc = topN(feelCounts(list),2); if (fc.length) lines.push(`Tu t'es surtout senti : ${fc.map(([k]) => k.toLowerCase()).join(', ')}.`);
+  // comparaison avec la période précédente
+  const len = Math.round((parseYmd(to) - parseYmd(from)) / 86400000) + 1;
+  const pFrom = kind === 'mois' ? ymd(new Date(parseYmd(from).getFullYear(), parseYmd(from).getMonth()-1, 1)) : addDays(from, -len);
+  const pTo = addDays(from, -1);
+  const pr = ratioOf(counts(inRange(entries(), pFrom, pTo)));
+  if (pr !== null && r !== null && r !== Infinity && pr !== Infinity) lines.push(r > pr + 0.2 ? 'Mieux que la période précédente.' : r < pr - 0.2 ? 'Moins bien que la période précédente.' : 'À peu près pareil que la période précédente.');
+  return lines.join(' ');
+}
+function renderBilans(m){
+  const ps = S.bilanSeg === 'semaine' ? periodsWeeks() : periodsMonths();
+  m.innerHTML = `<h1>Bilans</h1>
+  <div class="seg" role="tablist"><button data-bs="semaine" class="${S.bilanSeg==='semaine'?'on':''}">Semaines</button><button data-bs="mois" class="${S.bilanSeg==='mois'?'on':''}">Mois</button></div>
+  ${ps.map((p,i) => `<div class="card">
+    <div style="font-weight:700">${esc(p.label)}${i===0 ? ' <span class="sub" style="font-weight:400">· en cours</span>' : ''}</div>
+    <div class="row" style="gap:6px;margin:8px 0">${ORDER.map(c => { const n = counts(inRange(entries(), p.from, p.to))[c]; return n ? `<span class="row" style="gap:4px;font-size:13px"><span class="dot c-${c}" style="width:10px;height:10px"></span>${n}</span>` : ''; }).join('')}</div>
+    <div class="bilan-text">${esc(summaryText(p.from, p.to, S.bilanSeg))}</div>
+    <button class="btn block" data-export="${p.from}|${p.to}|${esc(p.label)}" style="margin-top:12px">Exporter ce bilan pour Claude</button>
+  </div>`).join('')}
+  <small class="hint" style="margin-top:12px">Le fichier exporté contient le détail de la période (moments, tuiles, annotations, notes). Envoie-le dans la conversation avec Claude pour en parler.</small>`;
+  m.querySelectorAll('[data-bs]').forEach(b => b.onclick = () => { S.bilanSeg = b.dataset.bs; render(); });
+  m.querySelectorAll('[data-export]').forEach(b => b.onclick = () => { const [f,t,l] = b.dataset.export.split('|'); exportPeriod(f, t, l); });
+}
+function periodText(from, to, label){
+  const L = [];
+  L.push(`# Umoral — ${label}`);
+  L.push(`Période : du ${longDate(from)} au ${longDate(to)}`);
+  L.push('');
+  L.push('## Résumé automatique');
+  L.push(summaryText(from, to, S.bilanSeg));
+  L.push('');
+  L.push('Légende : ⚪ parfait · 🟢 bon moment · 🟠 tendu · 🔴 difficile · ⚫ elle est allée trop loin');
+  L.push('');
+  L.push('## Détail jour par jour');
+  let d = from; const sym = {w:'⚪',g:'🟢',o:'🟠',r:'🔴',k:'⚫'};
+  while (d <= to) {
+    const items = byDay(d);
+    if (items.length) {
+      L.push(''); L.push(`### ${longDate(d)}`);
+      items.forEach(i => {
+        if (i.type === 'n') { L.push(`- ${i.time} · Note : ${i.text}`); return; }
+        L.push(`- ${i.time} ${sym[i.color]} ${COLORS[i.color].name}${i.qui ? ' · Qui : ' + QUI[i.qui] : ''}`);
+        if (i.what) L.push(`  - Ce qui s'est passé : ${i.what}`);
+        if (i.feel && i.feel.length) L.push(`  - Ressenti : ${i.feel.join(', ')}`);
+        const fmt = o => Object.entries(o||{}).map(([k,v]) => v ? `${k} (${v})` : k).join(', ');
+        if (Object.keys(i.elle||{}).length) L.push(`  - Elle : ${fmt(i.elle)}`);
+        if (Object.keys(i.moi||{}).length) L.push(`  - Moi : ${fmt(i.moi)}`);
+        if (i.air) L.push(`  - J'ai pris l'air`);
+        if (i.need) L.push(`  - Ce dont j'aurais eu besoin : ${i.need}`);
+        if (i.repair) L.push(`  - Réparé : ${REPAIR[i.repair]}`);
+        if ((i.photos||[]).length) L.push(`  - Photos jointes : ${i.photos.length} (non incluses dans ce fichier)`);
+      });
+    }
+    d = addDays(d, 1);
+  }
+  return L.join('\n');
+}
+async function shareOrDownload(blob, name){
+  const file = new File([blob], name, {type: blob.type});
+  try {
+    if (navigator.canShare && navigator.canShare({files:[file]})) { await navigator.share({files:[file], title:name}); return; }
+  } catch(e) { if (e && e.name === 'AbortError') return; }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+}
+function exportPeriod(from, to, label){
+  const txt = periodText(from, to, label);
+  shareOrDownload(new Blob([txt], {type:'text/plain'}), `umoral-bilan-${from}_${to}.txt`);
+}
+
+/* ---------- RÉGLAGES ---------- */
+function renderReglages(m){
+  const nE = entries().length, nN = notes().length;
+  m.innerHTML = `<div class="row"><button class="iconbtn" id="back" aria-label="Retour">${ICON.left}</button><h1 style="margin:0">Réglages</h1></div>
+  <div class="card"><div style="font-weight:700">Sauvegarde</div>
+    <div class="sub" style="margin-top:4px">${nE} moment(s), ${nN} note(s) sur ce téléphone.</div>
+    <button class="btn primary block" id="backup" style="margin-top:12px">Sauvegarder tout</button>
+    <small class="hint">Ouvre le menu de partage : choisis « Enregistrer dans Fichiers », puis ton dossier Umoral. Photos comprises.</small>
+    <button class="btn block" id="restore" style="margin-top:12px">Restaurer une sauvegarde</button>
+    <small class="hint">Attention : remplace tout ce qu'il y a dans l'appli par le contenu du fichier.</small></div>
+  <div class="card"><div style="font-weight:700">Rappel du soir</div>
+    <label class="q" for="rem" style="margin-top:10px">Heure du rappel</label>
+    <input type="time" id="rem" value="${esc(S.settings.reminder)}">
+    <small class="hint">Une appli web sur iPhone ne peut pas envoyer de rappel toute seule. Pour l'avoir : app Raccourcis › Automatisation › Heure de la journée (${esc(S.settings.reminder)}, tous les jours) › action « Ouvrir l'URL » avec l'adresse d'Umoral, ou « Afficher une notification ». Désactive « Demander avant d'exécuter ».</small></div>
+  <div class="card"><div style="font-weight:700">Mes tuiles</div>
+    <div class="sub" style="margin:6px 0">Ressentis ajoutés :</div>
+    <div class="chips">${S.settings.feel.map((t,i) => `<button class="chip" data-rmfeel="${i}" aria-label="Retirer ${esc(t)}">${esc(t)} ×</button>`).join('') || '<span class="empty">Aucune</span>'}</div>
+    <div class="sub" style="margin:10px 0 6px">Tuiles Elle / Moi ajoutées :</div>
+    <div class="chips">${S.settings.acts.map((t,i) => `<button class="chip" data-rmact="${i}" aria-label="Retirer ${esc(t)}">${esc(t)} ×</button>`).join('') || '<span class="empty">Aucune</span>'}</div>
+    <small class="hint">Les nouvelles tuiles s'ajoutent avec « + Ma tuile » dans une pastille.</small></div>
+  <div class="card"><div style="font-weight:700">Code</div>
+    <button class="btn block" id="chpin" style="margin-top:10px">Changer mon code</button>
+    <button class="btn block" id="lock" style="margin-top:8px">Verrouiller maintenant</button></div>
+  <small class="hint" style="margin:14px 0">Umoral garde tout sur ce téléphone. Rien n'est envoyé sur Internet.</small>`;
+  $('#back').onclick = () => { S.tab = 'livre'; render(); };
+  $('#rem').onchange = async ev => { S.settings.reminder = ev.target.value; await saveSettings(); render(); };
+  $('#backup').onclick = backupAll;
+  $('#restore').onclick = () => { const inp = $('#restoreInput'); inp.value = ''; inp.onchange = () => inp.files[0] && restoreAll(inp.files[0]); inp.click(); };
+  m.querySelectorAll('[data-rmfeel]').forEach(b => b.onclick = async () => { S.settings.feel.splice(+b.dataset.rmfeel, 1); await saveSettings(); render(); });
+  m.querySelectorAll('[data-rmact]').forEach(b => b.onclick = async () => { S.settings.acts.splice(+b.dataset.rmact, 1); await saveSettings(); render(); });
+  $('#chpin').onclick = async () => {
+    const cur = prompt('Ton code actuel :');
+    if (cur === null) return;
+    if (await hashPin(cur.trim()) !== S.settings.pin) return alert('Ce n\'est pas le bon code.');
+    S.settings.pin = null; await saveSettings(); S.unlocked = false; pinStage = 'enter'; pinBuf = ''; render();
+  };
+  $('#lock').onclick = () => { S.unlocked = false; render(); };
+}
+const blobToDataURL = b => new Promise(res => { const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(b); });
+async function backupAll(){
+  const photos = await DB.all('photos');
+  const out = {app:'umoral', version:1, date:new Date().toISOString(), items:S.items, settings:{...S.settings, pin:undefined}, photos:[]};
+  for (const p of photos) out.photos.push({id:p.id, data: await blobToDataURL(p.blob)});
+  await shareOrDownload(new Blob([JSON.stringify(out)], {type:'application/json'}), `umoral-sauvegarde-${todayStr()}.json`);
+}
+async function restoreAll(file){
+  try {
+    const data = JSON.parse(await file.text());
+    if (data.app !== 'umoral' || !Array.isArray(data.items)) throw new Error('format');
+    if (!confirm(`Restaurer ${data.items.length} élément(s) ? Ce qu'il y a actuellement dans l'appli sera remplacé.`)) return;
+    await DB.clear('items'); await DB.clear('photos');
+    for (const it of data.items) await DB.put('items', it);
+    for (const p of data.photos || []) { const blob = await (await fetch(p.data)).blob(); await DB.put('photos', {id:p.id, blob}); }
+    const pin = S.settings.pin;
+    S.settings = {...S.settings, ...(data.settings||{}), pin};
+    await saveSettings();
+    S.items = data.items; S.photoUrls = {};
+    toast('Sauvegarde restaurée'); render();
+  } catch(e) { alert("Ce fichier n'est pas une sauvegarde Umoral valide."); }
+}
+
+/* ---------- boot ---------- */
+(async function boot(){
+  try {
+    await DB.open();
+    try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch(_) {}
+    S.items = await DB.all('items') || [];
+    const st = await DB.get('kv', 'settings');
+    if (st) S.settings = {...S.settings, ...st.v};
+    S.settings.feel = S.settings.feel || []; S.settings.acts = S.settings.acts || [];
+  } catch(e) {
+    $('#app').innerHTML = '<div class="pin"><div>Impossible d\'ouvrir le stockage du téléphone. Ouvre Umoral dans Safari (pas en navigation privée).</div></div>';
+    return;
+  }
+  render();
+  // nouvelle page automatique : si l'appli reste ouverte après minuit, on passe au jour suivant
+  let last = todayStr();
+  setInterval(() => { const t = todayStr(); if (t !== last) { if (S.day === last) S.day = t; last = t; if (S.unlocked && S.tab === 'livre' && !document.querySelector('.overlay')) render(); } }, 60000);
+  // reverrouille après 2 minutes en arrière-plan
+  let hiddenAt = 0;
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) hiddenAt = Date.now();
+    else if (S.unlocked && hiddenAt && Date.now() - hiddenAt > 120000) { S.unlocked = false; document.querySelectorAll('.overlay').forEach(o => o.remove()); render(); }
+  });
+})();
+</script>
+</body>
+</html>

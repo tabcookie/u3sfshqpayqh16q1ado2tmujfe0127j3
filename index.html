@@ -50,6 +50,9 @@ h1{font-size:22px;margin:4px 0 4px}
 .btn{height:46px;border-radius:12px;border:1px solid var(--border);background:var(--surface);color:var(--text);padding:0 14px;font-size:15px}
 .btn.primary{background:var(--accent);color:#0B1220;border:none;font-weight:700}
 .btn.danger{background:transparent;border-color:#5A2427;color:#F58A8E}
+.btn:disabled{opacity:.4}
+.selbox{flex:none;width:24px;height:24px;margin-top:1px;border-radius:7px;border:2px solid var(--muted);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:#0B1220}
+.item.selon .selbox{background:#F58A8E;border-color:#F58A8E}
 .btn.block{width:100%}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
 .chip{min-height:40px;padding:0 14px;border-radius:20px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:14px}
@@ -236,6 +239,7 @@ const S = {
   items: [],            // entries (type:'e') and notes (type:'n')
   settings: {pin:null, feel:[], acts:[], tiles:{}, childName:'', reminder:'21:00', alertSeen:''},
   unlocked: false,
+  selMode: false, sel: new Set(), selDay: null,   // sélection de moments à supprimer (pas sauvegardée)
   tab: 'livre',
   day: todayStr(),
   statsSeg: 'mois',
@@ -384,6 +388,7 @@ function render(){
 
 /* ---------- LIVRE ---------- */
 function entryLine(e){
+  const sel = S.selMode, on = sel && S.sel.has(e.id);
   const parts = [e.time];
   if (e.qui) parts.push(QUI[e.qui]);
   if (e.devant) parts.push(devantLabel());
@@ -393,9 +398,9 @@ function entryLine(e){
   const txt = e.what || e.elleNote || (e.feel && e.feel.length ? e.feel.join(', ') : '');
   const rt = e.ratt && e.ratt.ok === 'oui' ? Object.values(e.ratt.tiles) : [];
   const rattLine = e.ratt && e.ratt.ok ? (e.ratt.ok === 'non' ? 'Rattrapée : non' : 'Rattrapée : ' + (rt.length ? ['w','g','o'].filter(c => rt.some(r => r.lvl === c)).map(c => RATT[c].toLowerCase() + ' ' + rt.filter(r => r.lvl === c).length).join(' · ') : 'oui')) : '';
-  const canRatt = RATT_COLORS.includes(e.color);
-  return `<div class="entrywrap"><button class="item" data-entry="${e.id}" ${canRatt ? 'style="padding-right:52px"' : ''}>
-    <span class="dot c-${e.color}" style="margin-top:3px"></span>
+  const canRatt = RATT_COLORS.includes(e.color) && !sel;
+  return `<div class="entrywrap"><button class="item${on ? ' selon' : ''}" data-entry="${e.id}" ${sel ? `aria-pressed="${on}"` : ''} ${canRatt ? 'style="padding-right:52px"' : ''}>
+    ${sel ? `<span class="selbox" aria-hidden="true">${on ? '✓' : ''}</span>` : ''}<span class="dot c-${e.color}" style="margin-top:3px"></span>
     <span style="flex:1;min-width:0">
       <span class="between meta"><span>${esc(parts.join(' · '))}</span><span>${ph ? ph + ' photo' + (ph>1?'s':'') : ''}</span></span>
       ${tags.length ? `<span class="meta" style="display:block;margin-top:2px">${esc(tags.join(' · '))}</span>` : ''}
@@ -407,6 +412,7 @@ function entryLine(e){
 function renderLivre(m){
   const t = todayStr();
   const d = S.day;
+  if (S.selMode && S.selDay !== d) { S.selMode = false; S.sel = new Set(); }
   const list = byDay(d);
   const ents = list.filter(i => i.type === 'e');
   const nts = list.filter(i => i.type === 'n' && !i.tri);
@@ -442,6 +448,9 @@ function renderLivre(m){
     <div class="sub">Moments${ents.length ? ' (' + ents.length + ')' : ''}</div>
     ${ents.length ? ents.map(entryLine).join('') : `<div class="empty" style="padding:12px 0">Rien de noté pour l'instant.</div>`}
   </section>
+  ${ents.length ? (S.selMode
+    ? `<div class="row" style="display:flex;gap:8px;margin-top:10px"><button class="btn" id="selcancel">Annuler</button><button class="btn danger" id="seldel" style="flex:1" ${S.sel.size ? '' : 'disabled'}>Supprimer (${S.sel.size})</button></div>`
+    : `<button class="btn danger block" id="selstart" style="margin-top:10px">Supprimer des moments</button>`) : ''}
   <section class="card" aria-label="Notes">
     <div class="between"><span class="sub">Notes</span></div>
     ${nts.map(n => `<button class="item" data-note="${n.id}"><span class="meta" style="min-width:44px">${esc(n.time)}</span><span class="txt" style="margin:0;flex:1">${esc(n.text)}</span></button>`).join('')}
@@ -455,7 +464,18 @@ function renderLivre(m){
   if ($('#gotoday')) $('#gotoday').onclick = () => { S.day = t; render(); };
   $('#settings').onclick = () => { S.tab = 'reglages'; render(); };
   m.querySelectorAll('[data-new]').forEach(b => b.onclick = () => openEntry(null, b.dataset.new));
-  m.querySelectorAll('[data-entry]').forEach(b => b.onclick = () => openEntry(b.dataset.entry));
+  m.querySelectorAll('[data-entry]').forEach(b => b.onclick = () => {
+    if (!S.selMode) return openEntry(b.dataset.entry);
+    const id = b.dataset.entry; S.sel.has(id) ? S.sel.delete(id) : S.sel.add(id); render();
+  });
+  if ($('#selstart')) $('#selstart').onclick = () => { S.selMode = true; S.selDay = d; S.sel = new Set(); render(); };
+  if ($('#selcancel')) $('#selcancel').onclick = () => { S.selMode = false; S.sel = new Set(); render(); };
+  if ($('#seldel')) $('#seldel').onclick = async () => {
+    const n = S.sel.size; if (!n) return;
+    if (!confirm(`Supprimer ${n} moment${n>1?'s':''} ? C'est définitif.`)) return;
+    for (const id of S.sel) await deleteItem(id);
+    S.selMode = false; S.sel = new Set(); toast(n > 1 ? n + ' moments supprimés' : 'Moment supprimé'); render();
+  };
   m.querySelectorAll('[data-ratt]').forEach(b => b.onclick = () => openEntry(b.dataset.ratt, null, null, 'ratt'));
   m.querySelectorAll('[data-repair]').forEach(b => b.onclick = async () => { const e = S.items.find(x => x.id === b.dataset.repair); e.repair = b.dataset.v; await saveItem(e); toast('Noté'); render(); });
   m.querySelectorAll('[data-note]').forEach(b => b.onclick = () => openNote(b.dataset.note));

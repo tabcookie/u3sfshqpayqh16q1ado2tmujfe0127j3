@@ -1,5 +1,8 @@
 # Journal des versions
 
+## v1.9 — 16 nov. 2026
+- Bouton « Supprimer des moments » sous le cadre Moments : on coche les moments à effacer, « Supprimer (n) » ou « Annuler », avec confirmation (définitif).
+
 ## v1.8 — 16 nov. 2026
 - ⚡ Note rapide en haut du Livre : on note sur le coup, elle attend dans « À trier ».
 - En la touchant, on choisit une couleur : la pastille s'ouvre avec le texte déjà dans « Note sur elle », à la même heure ; une fois validée, la note quitte « À trier ».

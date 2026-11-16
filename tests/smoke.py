@@ -154,6 +154,22 @@ with sync_playwright() as p:
     check(pg.locator('[data-tri]').count() == 0, 'note rapide toujours « À trier » après rangement')
     check(pg.locator('[data-entry]').count() == 7, 'note rapide : pastille non créée')
 
+    # 4f. supprimer des moments par sélection
+    for _ in range(2):
+        pg.click('[data-new="w"]'); pg.click('#wquick'); pg.wait_for_timeout(300)
+    n0 = pg.locator('[data-entry]').count()
+    pg.click('#selstart'); pg.wait_for_timeout(100)
+    check(pg.locator('.selbox').count() == n0, 'sélection : cases à cocher absentes')
+    check(pg.is_disabled('#seldel'), 'sélection : « Supprimer » doit être grisé sans choix')
+    pg.locator('[data-entry]').nth(n0-1).click(); pg.locator('[data-entry]').nth(n0-2).click(); pg.wait_for_timeout(100)
+    check('(2)' in pg.inner_text('#seldel'), 'sélection : compteur faux')
+    check(pg.locator('#eok').count() == 0, 'sélection : toucher un moment ne doit pas l\'ouvrir')
+    pg.click('#seldel'); pg.wait_for_timeout(300)
+    check(pg.locator('[data-entry]').count() == n0 - 2, 'sélection : moments non supprimés')
+    check(pg.locator('#selstart').count() == 1 and pg.locator('.selbox').count() == 0, 'sélection : le mode ne se referme pas')
+    pg.click('#selstart'); pg.locator('[data-entry]').nth(0).click(); pg.click('#selcancel'); pg.wait_for_timeout(100)
+    check(pg.locator('[data-entry]').count() == n0 - 2, 'sélection : « Annuler » a supprimé quelque chose')
+
     # 5. note
     pg.fill('#newnote', 'Note de test'); pg.click('#addnote'); pg.wait_for_timeout(200)
     check(pg.locator('[data-note]').count() == 1, 'note non ajoutée')

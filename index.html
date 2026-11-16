@@ -771,7 +771,10 @@ async function shareOrDownload(blob, name){
 }
 function exportPeriod(from, to, label){
   const txt = periodText(from, to, label);
-  shareOrDownload(new Blob([txt], {type:'text/plain'}), `umoral-bilan-${from}_${to}.txt`);
+  const name = S.bilanSeg === 'mois'
+    ? `Umoral_bilan_${MOIS[parseYmd(from).getMonth()]}-${parseYmd(from).getFullYear()}.txt`
+    : `Umoral_bilan_semaine${isoWeek(from)}_${from}_au_${to}.txt`;
+  shareOrDownload(new Blob([txt], {type:'text/plain'}), name);
 }
 
 /* ---------- RÉGLAGES ---------- */
@@ -817,7 +820,7 @@ async function backupAll(){
   const photos = await DB.all('photos');
   const out = {app:'umoral', version:1, date:new Date().toISOString(), items:S.items, settings:{...S.settings, pin:undefined}, photos:[]};
   for (const p of photos) out.photos.push({id:p.id, data: await blobToDataURL(p.blob)});
-  await shareOrDownload(new Blob([JSON.stringify(out)], {type:'application/json'}), `umoral-sauvegarde-${todayStr()}.json`);
+  await shareOrDownload(new Blob([JSON.stringify(out)], {type:'application/json'}), `Umoral_sauvegarde_${todayStr()}_${nowTime().replace(':','h')}.json`);
 }
 async function restoreAll(file){
   try {

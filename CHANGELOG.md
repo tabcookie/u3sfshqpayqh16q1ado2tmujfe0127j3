@@ -1,5 +1,11 @@
 # Journal des versions
 
+## v1.13 — 17 nov. 2026
+- « Ma réaction » : « ▾ Sa note » (sa note sur la tuile) et « + Ma note » repliés par défaut.
+- Détails d'un moment rangés par événement : une carte par chose qu'elle a faite (Elle / Moi / Après), puis Sa note, Je me sens, Ma note, Besoin, Après coup, Réparé.
+- Nouveau « Juste moi » dans Qui ? : une page avec beaucoup d'émotions classiques par couleur (+ par couleur), petite note, pas d'Après coup ni de Revenir dessus.
+- « Juste moi » hors stats du couple. Tableau : « Notre tableau » / « Mon tableau » en haut ; Mon tableau = mon humeur (ratio, verdict, émotions fréquentes, calendrier, pastilles). Bilans : ligne « Mon humeur ».
+
 ## v1.12 — 17 nov. 2026
 - Livre : plus de bannières « Ça s'est réparé ? ». Sur chaque moment (toutes couleurs) : « ↩ Revenir dessus ? » replié → Ça s'est réparé ? Oui · Non · Pas vraiment + note, Tu lui en veux ? 🟢🟠🔴⚫.
 - Moments du Livre sur 2 lignes (heure · Qui · photos / note ou tuiles) + « ▾ Détails » qui déplie tout par blocs (Elle, Ma réaction, Moi, Après coup).

@@ -48,7 +48,11 @@ h1{font-size:22px;margin:4px 0 4px}
 .etools{display:flex;gap:14px;padding:0 0 10px 28px}
 .etools button{background:none;border:none;color:var(--accent);font-size:13px;padding:4px 0}
 .dpanel{margin:0 0 12px 28px;padding:10px 12px;border-radius:12px;background:var(--bg);border:1px solid var(--border)}
-.dblk+.dblk{margin-top:10px}
+.ev{border:1px solid var(--border);border-radius:10px;padding:8px 10px;margin-bottom:8px}
+.evt{font-weight:700;font-size:15px;margin-bottom:4px}
+.evr{display:flex;gap:10px;font-size:14px;line-height:1.45;padding:2px 0}
+.evr>span:first-child{flex:none;width:72px;color:var(--muted);font-size:12px;padding-top:2px}
+.evg{padding:2px 2px 0}
 .dl{font-size:14px;line-height:1.45;margin-top:3px}
 .rattbtn{position:absolute;right:0;top:12px;width:44px;height:44px;border-radius:22px;border:1px solid var(--border);background:var(--bg);color:var(--accent);font-size:20px}
 .pills{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
@@ -201,7 +205,15 @@ const RATT_COLORS = ['o','r','k'];
 // case « devant l'enfant » : le prénom est réglé sur le téléphone, jamais dans le code
 const devantLabel = () => 'Devant ' + ((S.settings.childName || '').trim() || "l'enfant");
 
-const QUI = {elle:'Elle', moi:'Moi', deux:'Les deux'};
+const QUI = {elle:'Elle', moi:'Moi', deux:'Les deux', seul:'Juste moi'};
+// « Juste moi » : mon humeur, hors stats du couple
+const MOOD = {
+  w:['Joie','Sérénité','Gratitude','Amour','Fierté','Émerveillement','Euphorie','Plénitude','Tendresse','Inspiration'],
+  g:['Content','Calme','Confiant','Soulagé','Motivé','Détendu','Optimiste','Curieux','Reposé','Satisfait','Énergique','Reconnaissant'],
+  o:['Fatigue','Ennui','Agacement','Inquiétude','Frustration','Nostalgie','Impatience','Confusion','Lassitude','Nervosité','Mélancolie','Doute','Irritabilité','Vulnérable'],
+  r:['Tristesse','Colère','Anxiété','Solitude','Honte','Jalousie','Découragement','Culpabilité','Rancœur','Peur','Déception','Stress','Injustice','Incompris','Rejeté'],
+  k:['Désespoir','Rage','Panique','Vide','Épuisement total','Détresse','Dégoût','Impuissance','Abandon','Humiliation']
+};
 const REPAIR = {oui:'Oui', non:'Non', pv:'Pas vraiment', partie:'En partie'};
 const REPAIR_OPTS = ['oui','non','pv'];
 
@@ -286,17 +298,20 @@ const S = {
   bilanSeg: 'semaine',
   photoUrls: {}
 };
-const entries = () => S.items.filter(i => i.type === 'e');
+// moments du couple (sans « Juste moi ») et mon humeur à part
+const entries = () => S.items.filter(i => i.type === 'e' && i.qui !== 'seul');
+const moods = () => S.items.filter(i => i.type === 'e' && i.qui === 'seul');
 const notes = () => S.items.filter(i => i.type === 'n');
 const byDay = d => S.items.filter(i => i.date === d).sort((a,b) => (a.time||'').localeCompare(b.time||'') || a.ts - b.ts);
 // tuiles de base de la couleur + celles qu'il a ajoutées (pour cette couleur, ou avant v1.5 pour toutes)
 const myTiles = (c, kind) => ((S.settings.tiles || {})[c] || {})[kind] || [];
 const uniq = a => [...new Set(a)];
+const moodTiles = c => uniq([...MOOD[c], ...myTiles(c, 'mood')]);
 const reactTiles = c => uniq([...REACT_TILES[c], ...myTiles(c, 'react')]);
 const feelTiles = c => uniq([...TILES[c].feel, ...myTiles(c, 'feel'), ...(S.settings.feel || [])]);
 const actTiles = (c, side) => uniq([...TILES[c].acts, ...(side === 'moi' ? TILES[c].moiActs || [] : []), ...myTiles(c, 'acts'), ...(S.settings.acts || [])]);
 async function addMyTile(c, kind, name){
-  if ((kind === 'acts' ? actTiles(c, 'moi') : kind === 'react' ? reactTiles(c) : feelTiles(c)).includes(name)) return;
+  if ((kind === 'acts' ? actTiles(c, 'moi') : kind === 'react' ? reactTiles(c) : kind === 'mood' ? moodTiles(c) : feelTiles(c)).includes(name)) return;
   S.settings.tiles = S.settings.tiles || {};
   S.settings.tiles[c] = S.settings.tiles[c] || {acts:[], feel:[]};
   (S.settings.tiles[c][kind] = S.settings.tiles[c][kind] || []).push(name);
@@ -434,8 +449,9 @@ function entryLine(e){
   if (e.devant) parts.push(devantLabel());
   const ph = (e.photos||[]).length + (e.ellePhotos||[]).length;
   const tiles = Object.keys(e.elle||{}).length ? Object.keys(e.elle) : Object.keys(e.moi||{});
-  const txt = e.elleNote || e.what || (tiles.length ? tiles.slice(0,2).join(', ') + (tiles.length > 2 ? ' +' + (tiles.length - 2) : '') : '');
-  const canRatt = RATT_COLORS.includes(e.color) && !sel;
+  const txt = e.elleNote || e.what || (e.qui === 'seul' && e.feel && e.feel.length ? e.feel.slice(0,3).join(', ') : '') || (tiles.length ? tiles.slice(0,2).join(', ') + (tiles.length > 2 ? ' +' + (tiles.length - 2) : '') : '');
+  const solo = e.qui === 'seul';
+  const canRatt = RATT_COLORS.includes(e.color) && !sel && !solo;
   const op = S.open || {};
   const revState = [e.repair ? 'réparé : ' + REPAIR[e.repair].toLowerCase() : '', e.grudge ? `<span class="dot c-${e.grudge}" style="width:10px;height:10px"></span>` : ''].filter(Boolean).join(' · ');
   return `<div class="entrywrap"><button class="item${on ? ' selon' : ''}" data-entry="${e.id}" ${sel ? `aria-pressed="${on}"` : ''} ${canRatt ? 'style="padding-right:52px"' : ''}>
@@ -444,25 +460,24 @@ function entryLine(e){
       <span class="between meta"><span>${esc(parts.join(' · '))}</span><span>${ph ? ph + ' photo' + (ph>1?'s':'') : ''}</span></span>
       <span class="txt ${txt ? '' : 'empty'}" style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${txt ? esc(txt) : 'À compléter : touche pour écrire'}</span>
     </span></button>${canRatt ? `<button class="rattbtn" data-ratt="${e.id}" aria-label="Après coup">↺</button>` : ''}
-    ${sel ? '' : `<div class="etools"><button data-det="${e.id}" aria-expanded="${op[e.id] === 'd'}">${op[e.id] === 'd' ? '▴' : '▾'} Détails</button><button data-rev="${e.id}" aria-expanded="${op[e.id] === 'r'}">↩ Revenir dessus ?${revState ? ' <span class="row" style="display:inline-flex;gap:4px;color:var(--muted)">' + revState + '</span>' : ''}</button></div>
+    ${sel ? '' : `<div class="etools"><button data-det="${e.id}" aria-expanded="${op[e.id] === 'd'}">${op[e.id] === 'd' ? '▴' : '▾'} Détails</button>${solo ? '' : `<button data-rev="${e.id}" aria-expanded="${op[e.id] === 'r'}">↩ Revenir dessus ?${revState ? ' <span class="row" style="display:inline-flex;gap:4px;color:var(--muted)">' + revState + '</span>' : ''}</button>`}</div>
     ${op[e.id] === 'd' ? detailsHTML(e) : ''}${op[e.id] === 'r' ? revHTML(e) : ''}`}</div>`;
 }
-// tout le détail d'un moment, rangé par blocs
+// tout le détail d'un moment : une carte par chose qu'elle a faite, puis le général
 function detailsHTML(e){
-  const tl = (o, notes) => Object.keys(o).map(t => `<div class="dl"><b>${esc(t)}</b>${(notes||o)[t] ? ' — ' + esc((notes||o)[t]) : ''}</div>`).join('');
-  const blk = (title, inner) => inner ? `<div class="dblk"><div class="sub">${title}</div>${inner}</div>` : '';
-  const ar = Array.isArray;
-  const feelO = (a, n) => Object.fromEntries((a||[]).map(t => [t, (n||{})[t] || '']));
-  const reacts = reactsOf(e).map(([t, r]) => `<div class="dl">${t === ENSEMBLE ? '' : esc(t) + ' → '}${r.c ? `<span class="dot c-${r.c}" style="width:10px;height:10px;vertical-align:middle"></span> ` : ''}${esc(Object.keys(r.tiles||{}).map(k => k + (r.tiles[k] ? ' (' + r.tiles[k] + ')' : '')).join(', '))}${r.note ? ' — ' + esc(r.note) : ''}</div>`).join('');
-  const rt = Object.entries((e.ratt||{}).tiles || {});
-  const apres = [e.ratt && e.ratt.ok ? `<div class="dl">Rattrapée : ${ONP[e.ratt.ok]}${e.ratt.how ? ' — ' + esc(e.ratt.how) : ''}</div>` : '',
-    rt.map(([t,r]) => `<div class="dl">${esc(t)} : ${RATT[r.lvl]}${r.how ? ' — ' + esc(r.how) : ''}</div>`).join(''),
-    e.excuse && e.excuse.v ? `<div class="dl">Excuses : ${ONP[e.excuse.v]}${e.excuse.how ? ' — ' + esc(e.excuse.how) : ''}</div>` : ''].join('');
-  const out = blk('Elle', tl(e.elle||{}) + tl(feelO(e.elleFeel, e.elleFeelNotes)) + (e.elleNote ? `<div class="dl">${esc(e.elleNote)}</div>` : ''))
-    + blk('Ma réaction', reacts)
-    + blk('Moi', tl(e.moi||{}) + (e.air ? `<div class="dl">J'ai pris l'air</div>` : '') + (ar(e.feel) && e.feel.length ? `<div class="dl"><span class="sub">Je me sens : </span>${esc(e.feel.map(t => t + ((e.feelNotes||{})[t] ? ' (' + e.feelNotes[t] + ')' : '')).join(', '))}</div>` : '') + (e.what ? `<div class="dl">${esc(e.what)}</div>` : '') + (e.need ? `<div class="dl"><span class="sub">Besoin : </span>${esc(e.need)}</div>` : ''))
-    + blk('Après coup', apres);
-  return `<div class="dpanel">${out || '<div class="empty">Rien de détaillé.</div>'}</div>`;
+  const r3 = (k, v) => v ? `<div class="evr"><span>${k}</span><span>${v}</span></div>` : '';
+  const reacts = Object.fromEntries(reactsOf(e));
+  const rtl = (r) => r ? [r.c ? `<span class="dot c-${r.c}" style="width:10px;height:10px;vertical-align:middle"></span>` : '', esc(Object.keys(r.tiles||{}).map(k => k + (r.tiles[k] ? ' (' + r.tiles[k] + ')' : '')).join(', ')), r.note ? '— ' + esc(r.note) : ''].filter(Boolean).join(' ') : '';
+  const rt = (e.ratt||{}).tiles || {};
+  const her = Object.keys(e.elle||{});
+  const cards = [...her, ...(reacts[ENSEMBLE] ? [ENSEMBLE] : [])].map(t => `<div class="ev"><div class="evt">${esc(t)}</div>
+    ${r3('Elle', esc((e.elle||{})[t] || ''))}${r3('Moi', rtl(reacts[t]))}${r3('Après', rt[t] ? RATT[rt[t].lvl] + (rt[t].how ? ' — ' + esc(rt[t].how) : '') : '')}</div>`).join('');
+  const fl = (a, n) => (a||[]).map(t => t + ((n||{})[t] ? ' (' + n[t] + ')' : '')).join(', ');
+  const moi = [Object.keys(e.moi||{}).map(t => t + (e.moi[t] ? ' (' + e.moi[t] + ')' : '')).join(', '), e.air ? "J'ai pris l'air" : ''].filter(Boolean).join(' · ');
+  const apres = [e.ratt && e.ratt.ok ? 'Rattrapée : ' + ONP[e.ratt.ok] + (e.ratt.how ? ' (' + e.ratt.how + ')' : '') : '', e.excuse && e.excuse.v ? 'Excuses : ' + ONP[e.excuse.v] + (e.excuse.how ? ' (' + e.excuse.how + ')' : '') : ''].filter(Boolean).map(esc).join('<br>') + (e.grudge ? `<br>Je lui en veux <span class="dot c-${e.grudge}" style="width:10px;height:10px;vertical-align:middle"></span>` : '');
+  const gen = r3('Sa note', esc(e.elleNote || '')) + r3('Elle se sent', esc(fl(e.elleFeel, e.elleFeelNotes))) + r3('Avant', esc(moi)) + r3(e.qui === 'seul' ? 'Je me sens' : 'Je me sens', esc(fl(e.feel, e.feelNotes)))
+    + r3('Ma note', esc(e.what || '')) + r3('Besoin', esc(e.need || '')) + r3('Après coup', apres) + r3('Réparé', e.repair ? REPAIR[e.repair] + (e.repairNote ? ' — ' + esc(e.repairNote) : '') : '');
+  return `<div class="dpanel">${cards}${gen ? `<div class="evg">${gen}</div>` : ''}${!cards && !gen ? '<div class="empty">Rien de détaillé.</div>' : ''}</div>`;
 }
 function revHTML(e){
   return `<div class="dpanel">
@@ -660,9 +675,9 @@ function openEntry(id, color, draft, startAt, prefill){
   // « Qui ? Elle » : ma réaction remplace « ce que j'ai fait » (gardé pour « Les deux » et les anciens moments)
   const useReact = () => e.qui === 'elle';
   const sideSteps = s => s === 'elle' ? ['elleAct','elleNote'] : [useReact() ? 'moiReact' : 'moiAct','moiFeel','moiNote'];
-  const steps = () => { const o = e.qui === 'moi' ? ['moi','elle'] : ['elle','moi']; return ['qui', ...o.flatMap(sideSteps), ...(RATT_COLORS.includes(e.color) ? ['ratt'] : [])]; };
+  const steps = () => { if (e.qui === 'seul') return ['qui','moiSeul']; const o = e.qui === 'moi' ? ['moi','elle'] : ['elle','moi']; return ['qui', ...o.flatMap(sideSteps), ...(RATT_COLORS.includes(e.color) ? ['ratt'] : [])]; };
   if (startAt) step = Math.max(0, steps().indexOf(startAt));
-  const STEP_TITLE = {qui:'Qui ?', elleAct:"Elle · ce qu'elle a fait", elleFeel:'Elle · comment elle se sent', elleNote:'Elle · note', moiAct:"Moi · ce que j'ai fait", moiReact:'Moi · ma réaction', ratt:'Après coup', moiFeel:'Moi · comment je me sens', moiNote:'Moi · note', };
+  const STEP_TITLE = {qui:'Qui ?', elleAct:"Elle · ce qu'elle a fait", elleFeel:'Elle · comment elle se sent', elleNote:'Elle · note', moiAct:"Moi · ce que j'ai fait", moiReact:'Moi · ma réaction', moiSeul:'Juste moi · comment je me sens', ratt:'Après coup', moiFeel:'Moi · comment je me sens', moiNote:'Moi · note', };
   const feelKey = side => side === 'elle' ? 'elleFeel' : 'feel';
   const feelNotesKey = side => side === 'elle' ? 'elleFeelNotes' : 'feelNotes';
   const photoKey = side => side === 'elle' ? 'ellePhotos' : 'photos';
@@ -686,6 +701,7 @@ function openEntry(id, color, draft, startAt, prefill){
     return `<div class="chips">${withSelected(reactTiles(r.c), Object.keys(sel)).map(t => `<button class="chip ${t in sel ? 'on' : ''}" data-react="${esc(rt)}" data-tile="${esc(t)}" aria-pressed="${t in sel}">${esc(t)}${sel[t] ? ' ✎' : ''}</button>`).join('')}
       <button class="chip add" data-addreact="${esc(rt)}">+ Ma tuile</button></div>${preview('react', esc(rt), sel)}`;
   }
+  const unfold = {};
   function tapReact(rt, t){
     const s = rowOf(rt).tiles, wasOn = t in s;
     if (!wasOn) { s[t] = ''; redraw(); }
@@ -734,6 +750,7 @@ function openEntry(id, color, draft, startAt, prefill){
   }
   function stepHasContent(k){
     if (k === 'qui') return !!e.qui;
+    if (k === 'moiSeul') return e.feel.length > 0 || !!e.what;
     if (k === 'ratt') return !!(e.ratt.ok || e.excuse.v || e.grudge);
     if (k === 'moiReact') return reactRows().some(rt => e.reacts[rt] && (e.reacts[rt].c || e.reacts[rt].note));
     const side = k.startsWith('elle') ? 'elle' : 'moi';
@@ -769,10 +786,18 @@ function openEntry(id, color, draft, startAt, prefill){
       ${e.ratt.ok === 'non' ? `<small class="hint" style="margin-top:12px">Noté. Une page dédiée viendra plus tard.</small>` : ''}
       <small class="hint" style="margin-top:12px">Tu pourras aussi l'ajouter plus tard avec ↺ sur le moment, dans le Livre.</small>`;
     }
+    if (k === 'moiSeul') return `${ORDER.map(c => `<div class="row" style="gap:8px;margin:16px 0 8px"><span class="dot c-${c}"></span><span class="sub">${COLORS[c].name}</span></div>
+      <div class="chips">${withSelected(moodTiles(c), c === e.color ? e.feel.filter(t => !ORDER.some(x => moodTiles(x).includes(t))) : []).map(t => `<button class="chip ${e.feel.includes(t) ? 'on' : ''}" data-feel="moi" data-tile="${esc(t)}" aria-pressed="${e.feel.includes(t)}">${esc(t)}${e.feelNotes[t] ? ' ✎' : ''}</button>`).join('')}
+      <button class="chip add" data-addmood="${c}">+</button></div>`).join('')}
+      ${preview('feel', 'moi', Object.fromEntries(e.feel.map(t => [t, e.feelNotes[t] || ''])))}
+      <label class="q" for="ewhat">Petite note</label>
+      <textarea id="ewhat" rows="3" placeholder="Facultatif">${esc(e.what)}</textarea>`;
     if (k === 'moiReact') return `<small class="hint" style="margin-top:10px">Pour chaque chose qu'elle a faite, la couleur de ta réaction (elle peut être différente de la sienne), puis tes tuiles.</small>
       ${reactRows().map(rt => { const r = rowOf(rt); return `<div class="side"><div style="font-weight:700">${rt === ENSEMBLE ? ENSEMBLE : 'Elle : ' + esc(rt)}</div>
       <div class="pastilles" style="margin-top:8px">${ORDER.map(c => `<button class="pbtn c-${c}" data-rcol="${c}" data-rt="${esc(rt)}" style="width:42px;height:42px;${r.c===c ? 'outline:3px solid var(--accent);outline-offset:3px' : ''}" aria-pressed="${r.c===c}" aria-label="Réaction ${COLORS[c].name.toLowerCase()}"></button>`).join('')}</div>
-      <textarea data-rnote="${esc(rt)}" rows="2" style="margin-top:10px" placeholder="Note (facultatif)">${esc(r.note || '')}</textarea>
+      <div class="etools" style="padding:8px 0 0">${e.elle[rt] ? `<button data-hernote="${esc(rt)}">${unfold['h' + rt] ? '▴' : '▾'} Sa note</button>` : ''}<button data-mynote="${esc(rt)}">${unfold['m' + rt] || r.note ? '▴ Ma note' : '+ Ma note'}</button></div>
+      ${unfold['h' + rt] && e.elle[rt] ? `<div class="dl" style="color:var(--muted);margin-top:6px">${esc(e.elle[rt])}</div>` : ''}
+      ${unfold['m' + rt] || r.note ? `<textarea data-rnote="${esc(rt)}" rows="2" style="margin-top:8px" placeholder="Ma note (facultatif)">${esc(r.note || '')}</textarea>` : ''}
       ${r.c ? `<div style="margin-top:10px">${reactChips(rt)}</div>` : ''}</div>`; }).join('')}
       ${Object.keys(e.moi).length || e.air ? `<small class="hint" style="margin-top:12px">Noté avant (ce que j'ai fait) : ${esc([...Object.entries(e.moi).map(([t,v]) => t + (v ? ' — ' + v : '')), ...(e.air ? ["J'ai pris l'air"] : [])].join(' · '))}</small>` : ''}`;
     const side = k.startsWith('elle') ? 'elle' : 'moi';
@@ -805,7 +830,7 @@ function openEntry(id, color, draft, startAt, prefill){
     <div class="steps" role="tablist" aria-label="Étapes">${st.map((s,i) => `<button data-goto="${i}" class="${i===step ? 'on' : ''} ${stepHasContent(s) ? 'done' : ''}" aria-label="Étape ${i+1} : ${esc(STEP_TITLE[s])}" ${i===step ? 'aria-current="step"' : ''}></button>`).join('')}</div>`;
     bodyEl.innerHTML = `<h2 class="steptitle">${esc(STEP_TITLE[k])}</h2>${body(k)}
       ${last && !isNew ? `<div class="q">Changer la couleur</div><div class="pastilles">${ORDER.map(c => `<button class="pbtn c-${c}" data-recolor="${c}" style="width:44px;height:44px;${c===e.color ? 'outline:3px solid var(--accent);outline-offset:3px' : ''}" aria-label="Passer en ${COLORS[c].name.toLowerCase()}"></button>`).join('')}</div>` : ''}
-      ${last && !isNew ? `<div class="q">Ça s'est réparé ?</div><div class="three" style="margin-top:0">${REPAIR_OPTS.map(r => [r, REPAIR[r]]).map(([r,l]) => `<button data-rep="${r}" style="${e.repair===r ? 'border-color:var(--accent);background:var(--accent-bg);font-weight:600' : 'border-color:var(--border)'}">${l}</button>`).join('')}</div>` : ''}
+      ${last && !isNew && e.qui !== 'seul' ? `<div class="q">Ça s'est réparé ?</div><div class="three" style="margin-top:0">${REPAIR_OPTS.map(r => [r, REPAIR[r]]).map(([r,l]) => `<button data-rep="${r}" style="${e.repair===r ? 'border-color:var(--accent);background:var(--accent-bg);font-weight:600' : 'border-color:var(--border)'}">${l}</button>`).join('')}</div>` : ''}
       ${last && !isNew ? `<button class="btn danger block" id="edel" style="margin-top:20px">Supprimer ce moment</button>` : ''}
       <div style="height:20px"></div>`;
     footEl.innerHTML = `${step > 0 ? `<button class="btn" id="eprev" aria-label="Écran précédent">‹ Retour</button>` : ''}
@@ -834,6 +859,9 @@ function openEntry(id, color, draft, startAt, prefill){
     ov.querySelectorAll('[data-qui]').forEach(b => b.onclick = () => { syncText(); e.qui = b.dataset.qui; step = 1; draw(); });
     ov.querySelectorAll('[data-feel]').forEach(b => b.onclick = () => { syncText(); tapFeel(b.dataset.feel, b.dataset.tile); });
     ov.querySelectorAll('[data-side]').forEach(b => b.onclick = () => { syncText(); tapAct(b.dataset.side, b.dataset.tile); });
+    ov.querySelectorAll('[data-hernote]').forEach(b => b.onclick = () => { syncText(); const k = 'h' + b.dataset.hernote; unfold[k] = !unfold[k]; redraw(); });
+    ov.querySelectorAll('[data-mynote]').forEach(b => b.onclick = () => { syncText(); const k = 'm' + b.dataset.mynote, r = rowOf(b.dataset.mynote); if (r.note) return; unfold[k] = !unfold[k]; redraw(); });
+    ov.querySelectorAll('[data-addmood]').forEach(b => b.onclick = async () => { syncText(); const c = b.dataset.addmood; const v = (prompt(`Nom de ton émotion (${COLORS[c].name.toLowerCase()}) :`) || '').trim(); if (!v) return; await addMyTile(c, 'mood', v); if (!e.feel.includes(v)) tapFeel('moi', v); else redraw(); });
     ov.querySelectorAll('[data-react]').forEach(b => b.onclick = () => { syncText(); tapReact(b.dataset.react, b.dataset.tile); });
     ov.querySelectorAll('[data-rcol]').forEach(b => b.onclick = () => { syncText(); const r = rowOf(b.dataset.rt); r.c = r.c === b.dataset.rcol ? '' : b.dataset.rcol; redraw(); });
     ov.querySelectorAll('[data-addreact]').forEach(b => b.onclick = async () => { syncText(); const rt = b.dataset.addreact, r = rowOf(rt); const v = (prompt(`Nom de ta tuile (ma réaction, ${COLORS[r.c].name.toLowerCase()}) :`) || '').trim(); if (!v) return; await addMyTile(r.c, 'react', v); if (!(v in r.tiles)) tapReact(rt, v); else redraw(); });
@@ -919,13 +947,13 @@ function renderNoires(m){
 }
 
 // calendrier coloré d'un mois (Stats et Tableau)
-function calGrid(month, f){
+function calGrid(month, f, src){
   const [y, mo] = month.split('-').map(Number), first = new Date(y, mo-1, 1), last = new Date(y, mo, 0), t = todayStr();
   let cells = '';
   for (let i = 0; i < (first.getDay()+6)%7; i++) cells += '<div></div>';
   for (let n = 1; n <= last.getDate(); n++) {
     const ds = `${month}-${pad2(n)}`;
-    const es = entries().filter(e => e.date === ds).sort((a,b) => a.time.localeCompare(b.time));
+    const es = (src || entries)().filter(e => e.date === ds).sort((a,b) => a.time.localeCompare(b.time));
     const shown = f && f.size ? es.filter(e => f.has(e.color)) : es;
     const faded = f && f.size && !shown.length;
     cells += `<button class="day ${ds===t?'today':''} ${ds>t?'fut':''} ${faded?'faded':''}" data-day="${ds}" ${ds>t?'disabled':''} aria-label="${n} ${MOIS[mo-1]}, ${es.length} moment(s)">
@@ -936,36 +964,40 @@ function calGrid(month, f){
 /* ---------- TABLEAU ---------- */
 function renderTableau(m){
   const t = todayStr();
+  const mine = S.tbWho === 'moi', src = mine ? moods : entries;
   const seg = S.tbSeg || 'semaine';
   const month = S.tbMonth || t.slice(0,7);
   const [y, mo] = month.split('-').map(Number);
   const from = seg === 'semaine' ? mondayOf(t) : `${month}-01`;
   const to = seg === 'semaine' ? addDays(mondayOf(t), 6) : ymd(new Date(y, mo, 0));
-  const list = inRange(entries(), from, to);
-  const c = counts(list), r = ratioOf(c), v = verdict(r);
+  const list = inRange(src(), from, to);
+  const c = counts(list), r = ratioOf(c), v = mine ? moodVerdict(r) : verdict(r);
+  const topMood = topN(feelCounts(list), 5);
   const blacks = list.filter(e => e.color === 'k').sort((a,b) => (b.date+b.time).localeCompare(a.date+a.time));
-  const short = e => { const tg = Object.keys(e.elle||{}).slice(0,2).join(', '); const tx = e.elleNote || e.what || ''; return [tg, tx.length > 50 ? tx.slice(0,50) + '…' : tx].filter(Boolean).join(' · ') || 'Pas de texte'; };
-  m.innerHTML = `<h1>Tableau</h1>
+  const short = e => { const tg = (e.qui === 'seul' ? (e.feel||[]) : Object.keys(e.elle||{})).slice(0,2).join(', '); const tx = e.elleNote || e.what || ''; return [tg, tx.length > 50 ? tx.slice(0,50) + '…' : tx].filter(Boolean).join(' · ') || 'Pas de texte'; };
+  m.innerHTML = `<div class="seg" role="tablist" style="margin-top:6px"><button data-who="nous" class="${mine?'':'on'}">Notre tableau</button><button data-who="moi" class="${mine?'on':''}">Mon tableau</button></div>
   <div class="seg" role="tablist"><button data-tb="semaine" class="${seg==='semaine'?'on':''}">Cette semaine</button><button data-tb="mois" class="${seg==='mois'?'on':''}">${seg==='mois' ? cap(MOIS[mo-1]) + ' ' + y : 'Mois'}</button></div>
   <div class="card" style="text-align:center">
-    <div class="sub">Bons moments pour 1 mauvais</div>
+    <div class="sub">${mine ? 'Mon humeur : bons moments pour 1 difficile' : 'Bons moments pour 1 mauvais'}</div>
     <div class="bignum" style="color:${v.col};margin-top:6px">${fmtRatio(r)}</div>
     <div style="font-weight:700;color:${v.col};margin-top:6px">${esc(v.t)}</div>
-    ${c.k ? `<div class="banner warn" style="text-align:left"><strong>⚫ ${c.k} limite${c.k>1?'s':''} franchie${c.k>1?'s':''}</strong> sur la période. Une limite franchie ne se compense pas, quel que soit le ratio.</div>` : ''}
-    <small class="hint">Repère de Gottman : au moins 5 bons moments pour 1 mauvais dans les couples stables. C'est un repère, pas un diagnostic.</small>
+    ${c.k && !mine ? `<div class="banner warn" style="text-align:left"><strong>⚫ ${c.k} limite${c.k>1?'s':''} franchie${c.k>1?'s':''}</strong> sur la période. Une limite franchie ne se compense pas, quel que soit le ratio.</div>` : ''}
+    ${c.k && mine ? `<div class="banner warn" style="text-align:left"><strong>⚫ ${c.k} moment${c.k>1?'s':''} très dur${c.k>1?'s':''}</strong> sur la période. Pense à toi, parles-en à quelqu'un de confiance.</div>` : ''}
+    ${mine ? (topMood.length ? `<div class="pills" style="justify-content:center">${topMood.map(([k,n]) => `<span class="pill">${esc(k)} <b>${n}</b></span>`).join('')}</div>` : '') : `<small class="hint">Repère de Gottman : au moins 5 bons moments pour 1 mauvais dans les couples stables. C'est un repère, pas un diagnostic.</small>`}
   </div>
-  <div class="card"><div class="sub">Limites franchies${blacks.length ? ' (' + blacks.length + ')' : ''}</div>
-    ${blacks.length ? blacks.map(e => `<button class="item" data-entry="${e.id}"><span class="dot c-k" style="margin-top:3px"></span><span style="flex:1;min-width:0"><span class="meta">${esc(shortDate(e.date))} · ${esc(e.time)}</span><span class="txt" style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(short(e))}</span></span></button>`).join('') : '<div class="empty" style="padding:8px 0">Aucune sur la période.</div>'}</div>
+  ${mine ? '' : `<div class="card"><div class="sub">Limites franchies${blacks.length ? ' (' + blacks.length + ')' : ''}</div>
+    ${blacks.length ? blacks.map(e => `<button class="item" data-entry="${e.id}"><span class="dot c-k" style="margin-top:3px"></span><span style="flex:1;min-width:0"><span class="meta">${esc(shortDate(e.date))} · ${esc(e.time)}</span><span class="txt" style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(short(e))}</span></span></button>`).join('') : '<div class="empty" style="padding:8px 0">Aucune sur la période.</div>'}</div>`}
   <div class="card">
     <div class="between"><button class="iconbtn" id="tprev" aria-label="Mois précédent">${ICON.left}</button>
       <div style="font-size:16px;font-weight:600">${cap(MOIS[mo-1])} ${y}</div>
       <button class="iconbtn" id="tnext" aria-label="Mois suivant" ${month >= t.slice(0,7) ? 'disabled' : ''}>${ICON.right}</button></div>
-    <div style="margin-top:10px">${calGrid(month)}</div>
+    <div style="margin-top:10px">${calGrid(month, null, src)}</div>
     <small class="hint">Touche un jour pour ouvrir sa page.</small></div>
   <div class="card"><div class="sub">Toutes les pastilles · ${seg === 'semaine' ? 'cette semaine' : cap(MOIS[mo-1])}</div>
     <div class="pastilles" style="margin-top:10px">${ORDER.map(k => `<button class="rattpick" data-tcol="${k}" aria-label="${COLORS[k].name} : ${c[k]}"><span class="pbtn c-${k}" style="width:46px;height:46px"></span><b style="font-size:16px">${c[k]}</b></button>`).join('')}</div>
     <small class="hint">Touche une couleur pour voir la liste.</small></div>`;
   m.querySelectorAll('[data-tb]').forEach(b => b.onclick = () => { S.tbSeg = b.dataset.tb; render(); });
+  m.querySelectorAll('[data-who]').forEach(b => b.onclick = () => { S.tbWho = b.dataset.who; render(); });
   const shift = n => { const d = new Date(y, mo-1+n, 1); S.tbMonth = `${d.getFullYear()}-${pad2(d.getMonth()+1)}`; render(); };
   $('#tprev').onclick = () => shift(-1); $('#tnext').onclick = () => { if (month < t.slice(0,7)) shift(1); };
   m.querySelectorAll('[data-day]').forEach(b => b.onclick = () => { S.day = b.dataset.day; S.tab = 'livre'; render(); });
@@ -1139,11 +1171,12 @@ function summaryText(from, to, kind){
 // pastilles d'une période : « 🔴 2 difficiles »
 const PLABEL = {w:['parfait','parfaits'], g:['bon moment','bons moments'], o:['tendu','tendus'], r:['difficile','difficiles'], k:['limite franchie','limites franchies']};
 function pillsHTML(c){ return `<div class="pills">${ORDER.filter(k => c[k]).map(k => `<span class="pill"><span class="dot c-${k}"></span><b>${c[k]}</b> ${PLABEL[k][c[k]>1?1:0]}</span>`).join('')}</div>`; }
+function moodVerdict(r){ return r === null ? {t:'Pas encore de données', col:'var(--dim)'} : r === Infinity || r >= 3 ? {t:'Ça va plutôt bien', col:'var(--g)'} : r >= 1 ? {t:'Mitigé', col:'var(--o)'} : {t:'Période difficile pour toi', col:'var(--r)'}; }
 function verdict(r){ return r === null ? {t:'Pas encore de données', col:'var(--dim)'} : r === Infinity || r >= 5 ? {t:'Sain : au niveau d\'un couple stable', col:'var(--g)'} : r >= 1 ? {t:'Fragile : sous le repère de 5 pour 1', col:'var(--o)'} : {t:'Les mauvais moments dominent', col:'var(--r)'}; }
 function bilanBlocks(from, to, kind){
   const list = inRange(entries(), from, to);
   const jl = jvInRange(from, to);
-  if (!list.length && !jl.length) return '<div class="empty" style="margin-top:8px">Rien de noté sur cette période.</div>';
+  if (!list.length && !jl.length && !inRange(moods(), from, to).length) return '<div class="empty" style="margin-top:8px">Rien de noté sur cette période.</div>';
   const c = counts(list), r = ratioOf(c), v = verdict(r);
   const rows = [];
   const row = (k, val) => val && rows.push(`<div class="brow"><span>${k}</span><span>${val}</span></div>`);
@@ -1157,6 +1190,8 @@ function bilanBlocks(from, to, kind){
   if (reps.length) row('Réparé', `${reps.filter(e => e.repair === 'oui').length} sur ${reps.length}`);
   const ap = list.filter(e => e.ratt && e.ratt.ok || e.excuse && e.excuse.v);
   if (ap.length) row('Après coup', `rattrapée ${list.filter(e => e.ratt && e.ratt.ok === 'oui').length}/${ap.length} · excuses ${list.filter(e => e.excuse && e.excuse.v === 'oui').length}/${ap.length}`);
+  const ml = inRange(moods(), from, to);
+  if (ml.length) row('Mon humeur', ORDER.filter(k => counts(ml)[k]).map(k => `<span class="dot c-${k}" style="width:10px;height:10px"></span> ${counts(ml)[k]}`).join(' &nbsp;') + (topN(feelCounts(ml), 3).length ? '<br>' + topN(feelCounts(ml), 3).map(([k]) => esc(k)).join(' · ') : ''));
   if (jl.length) row('Je vais', ['elle','moi'].map(w => { const l = jl.filter(j => j.who === w); return `${w === 'elle' ? 'Elle' : 'Moi'} ${l.filter(j => j.status === 'done').length} fait · ${l.filter(j => j.status === 'drop').length} en l'air`; }).join('<br>'));
   const len = Math.round((parseYmd(to) - parseYmd(from)) / 86400000) + 1;
   const pFrom = kind === 'mois' ? ymd(new Date(parseYmd(from).getFullYear(), parseYmd(from).getMonth()-1, 1)) : addDays(from, -len);
@@ -1369,7 +1404,7 @@ function renderReglages(m){
     <input type="time" id="rem" value="${esc(S.settings.reminder)}">
     <small class="hint">Une appli web sur iPhone ne peut pas envoyer de rappel toute seule. Pour l'avoir : app Raccourcis › Automatisation › Heure de la journée (${esc(S.settings.reminder)}, tous les jours) › action « Ouvrir l'URL » avec l'adresse d'Umoral, ou « Afficher une notification ». Désactive « Demander avant d'exécuter ».</small></div>
   <div class="card"><div style="font-weight:700">Mes tuiles</div>
-    ${ORDER.map(c => { const m = (S.settings.tiles||{})[c] || {}; const all = [...(m.acts||[]).map(t => ['acts',t]), ...(m.feel||[]).map(t => ['feel',t]), ...(m.react||[]).map(t => ['react',t])]; return `<div class="row" style="margin:12px 0 6px;gap:8px"><span class="dot c-${c}"></span><span class="sub">${COLORS[c].name}</span></div>
+    ${ORDER.map(c => { const m = (S.settings.tiles||{})[c] || {}; const all = [...(m.acts||[]).map(t => ['acts',t]), ...(m.feel||[]).map(t => ['feel',t]), ...(m.react||[]).map(t => ['react',t]), ...(m.mood||[]).map(t => ['mood',t])]; return `<div class="row" style="margin:12px 0 6px;gap:8px"><span class="dot c-${c}"></span><span class="sub">${COLORS[c].name}</span></div>
       <div class="chips">${all.map(([k,t]) => `<button class="chip" data-rmtile="${c}|${k}|${esc(t)}" aria-label="Retirer ${esc(t)}">${esc(t)} ×</button>`).join('') || '<span class="empty">Aucune</span>'}</div>`; }).join('')}
     ${(S.settings.feel.length || S.settings.acts.length) ? `<div class="sub" style="margin:12px 0 6px">Ajoutées avant (toutes couleurs) :</div>
       <div class="chips">${S.settings.feel.map((t,i) => `<button class="chip" data-rmfeel="${i}" aria-label="Retirer ${esc(t)}">${esc(t)} ×</button>`).join('')}${S.settings.acts.map((t,i) => `<button class="chip" data-rmact="${i}" aria-label="Retirer ${esc(t)}">${esc(t)} ×</button>`).join('')}</div>` : ''}

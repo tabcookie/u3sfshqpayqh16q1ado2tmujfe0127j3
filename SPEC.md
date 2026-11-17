@@ -14,7 +14,7 @@ Journal personnel pour noter les moments d'une relation et y voir clair. Soutien
 - La noire n'écrase pas les autres couleurs de la journée.
 - Un clic ouvre toujours l'écran de la pastille, il faut « Valider » (on peut valider vide et compléter plus tard).
 - Page de la pastille (plein écran), un écran par choix : « Qui ? » (Elle / Moi / Les deux) → partie de la personne choisie (« Les deux » : Elle d'abord), puis l'autre. Elle : ce qu'elle a fait (tuiles) → note (texte, photos). Pas d'écran « comment elle se sent » : on ne peut pas savoir à sa place. Moi : ce que j'ai fait (tuiles ; « J'ai pris l'air » en orange seulement) → comment je me sens (tuiles) → note (texte, « De quoi j'aurais eu besoin ? », photos). Sur chaque écran : choisir, ou « Passer ». Barre d'étapes en haut pour sauter d'un écran à l'autre. Valider au dernier écran (avec couleur, réparation, suppression pour un moment déjà enregistré).
-- « Qui ? Elle » : côté Moi, toujours l'écran « Ma réaction » (anciennes tuiles « ce que j'ai fait » affichées en lecture), qui remplace « Ce que j'ai fait » : pour chaque tuile cochée chez elle (ou « dans l'ensemble »), couleur de la réaction (⚪🟢🟠🔴⚫, indépendante de la pastille) puis note facultative toujours visible, puis tuiles de cette couleur (bulle commentaire, « + Ma tuile »), puis « Comment je me sens », puis note et photos à la fin. « Les deux » garde « Ce que j'ai fait ». Stats : « Elle 🔴 → moi 🟢 : n fois ».
+- « Qui ? Elle » : côté Moi, toujours l'écran « Ma réaction » (anciennes tuiles « ce que j'ai fait » affichées en lecture), qui remplace « Ce que j'ai fait » : pour chaque tuile cochée chez elle (ou « dans l'ensemble »), couleur de la réaction (⚪🟢🟠🔴⚫, indépendante de la pastille) « ▾ Sa note » et « + Ma note » repliés par défaut, puis tuiles de cette couleur (bulle commentaire, « + Ma tuile »), puis « Comment je me sens », puis note et photos à la fin. « Les deux » garde « Ce que j'ai fait ». Stats : « Elle 🔴 → moi 🟢 : n fois ».
 - Dernier écran sur 🟠🔴⚫ « Après coup » : Elle s'est rattrapée ? et Excuses ? (Oui · Non · Pas vraiment + commentaire), Tu lui en veux ? 🟢🟠🔴⚫. Bouton ↺ sur chaque moment du Livre pour compléter après coup.
 - Case « Devant [prénom] » sur 🟠🔴⚫ (écran Qui ?), prénom réglé dans Réglages et stocké sur le téléphone seulement ; comptée dans les stats et les bilans.
 - Tuiles d'accusation : 🟠 Mauvaise interprétation · 🔴 Accusation · ⚫ Accusation grave.
@@ -28,9 +28,12 @@ Journal personnel pour noter les moments d'une relation et y voir clair. Soutien
 - Garde-fou : Mépris ou Insulte sur une pastille sous le rouge → « Ce serait plutôt une rouge ? » (suggestion seulement).
 - Pastille validée : modifier le contenu, changer la couleur, supprimer.
 
+## Juste moi
+4e choix dans « Qui ? » : une seule page « comment je me sens » (émotions classiques réparties sur les 5 couleurs, « + » par couleur, bulle commentaire) + petite note. Pas d'Après coup, pas de Revenir dessus. Jamais compté dans les stats du couple : vu dans « Mon tableau » et la ligne « Mon humeur » des bilans.
+
 ## Livre
 Une page par jour, datée, qui change toute seule. Pastilles en haut, liste des moments, notes séparées avec l'heure automatique.
-- Chaque moment : 2 lignes (heure · Qui · photos / note, sinon 2 premières tuiles « +n ») ; « ▾ Détails » déplie tout par blocs (Elle, Ma réaction, Moi, Après coup) ; « ↩ Revenir dessus ? » (toutes couleurs) : Ça s'est réparé ? Oui · Non · Pas vraiment + note, Tu lui en veux ? 🟢🟠🔴⚫.
+- Chaque moment : 2 lignes (heure · Qui · photos / note, sinon 2 premières tuiles « +n ») ; « ▾ Détails » déplie tout par événement (une carte par chose qu'elle a faite : Elle / Moi / Après, puis Sa note, Je me sens, Ma note, Besoin, Après coup, Réparé) ; « ↩ Revenir dessus ? » (toutes couleurs) : Ça s'est réparé ? Oui · Non · Pas vraiment + note, Tu lui en veux ? 🟢🟠🔴⚫.
 
 - Sous le cadre Moments : bouton « Supprimer des moments » → case à cocher devant chaque moment → « Supprimer (n) » / « Annuler » → confirmation « C'est définitif ».
 
@@ -43,6 +46,7 @@ Onglet entre Stats et Bilans. Noter ce qui est annoncé : Elle / Moi, texte, imp
 - Historique, Paroles en l'air, filtre Elle / Moi, stats propres (indépendantes des pastilles) ; présent dans les bilans et l'export.
 
 ## Tableau (ancien onglet Noires, nom provisoire)
+En haut : « Notre tableau » (couple) / « Mon tableau » (mon humeur, moments « Juste moi »).
 Cette semaine / Mois. En haut : ratio bons/mauvais en grand + verdict (≥5 sain, 1–5 fragile, <1 les mauvais dominent) ; message à part s'il y a une limite franchie (jamais compensée). Limites franchies condensées. Calendrier du mois (flèches, toucher un jour ouvre sa page). En bas : les 5 pastilles avec leur nombre ; un tap ouvre la liste depuis le bas.
 
 ## Stats

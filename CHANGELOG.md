@@ -1,5 +1,13 @@
 # Journal des versions
 
+## v1.15 — 17 nov. 2026
+- « Juste moi » : seules les émotions de la couleur choisie.
+- Fusionner des moments de la même couleur (bouton à côté de « Supprimer »).
+- Un seul « Détails » / « Revenir dessus » ouvert à la fois.
+- Cadre « Écris ce que tu as sur le cœur » retiré (anciennes notes gardées).
+- Énergie du jour 🔥 / 🧊 pour Elle et Moi, compteurs (touche +1, appui long −1) ; comptée dans le ratio (🔥 1,5 positif, 🧊 0,75 négatif), dans les bilans et l'export.
+- Tuile rouge « Frénésie ».
+
 ## v1.14 — 17 nov. 2026
 - Numéro de version affiché en bas des Réglages.
 - À l'ouverture (et au retour après 2 min), l'appli vérifie la version en ligne et se recharge toute seule si elle est plus récente (une seule fois, sans toucher aux données).

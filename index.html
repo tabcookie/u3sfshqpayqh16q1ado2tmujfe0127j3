@@ -45,6 +45,12 @@ h1{font-size:22px;margin:4px 0 4px}
 .item:last-child,.entrywrap:last-child .item{border-bottom:none}
 .entrywrap{position:relative;border-bottom:1px solid var(--border)}
 .entrywrap .item{border-bottom:none}
+.enrow{display:flex;align-items:center;gap:12px;margin-top:10px}.enrow>span{width:44px;font-weight:700}
+.entile{position:relative;width:64px;height:64px;border-radius:14px;border:1px solid var(--border);background:var(--bg);color:var(--text);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;overflow:hidden;padding:0;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:manipulation}
+.entile .ee{font-size:24px;line-height:1}.entile b{font-size:18px;line-height:1.1;max-width:100%;overflow:hidden}.entile b.sm{font-size:13px}
+.entile.f.on{border-color:#ff7a1a;background:color-mix(in srgb,#ff6a00 calc(12% + var(--lv)*8%),var(--bg))}
+.entile.i.on{border-color:#4aa8ff;background:color-mix(in srgb,#3aa0ff calc(12% + var(--lv)*8%),var(--bg))}
+.item.blocked{opacity:.35}
 .etools{display:flex;gap:14px;padding:0 0 10px 28px}
 .etools button{background:none;border:none;color:var(--accent);font-size:13px;padding:4px 0}
 .dpanel{margin:0 0 12px 28px;padding:10px 12px;border-radius:12px;background:var(--bg);border:1px solid var(--border)}
@@ -173,7 +179,7 @@ const TILES = {
   g: GOOD_TILES,
   o: {acts:['Oubli','Mauvaise interprétation','Petit reproche',"Risque d'engueulade",'Pas de vaisselle','Trop de téléphone','Retard','Remarque sèche','Pas écouté(e)'],
       feel:['Stress','Ennui','Flemme','Agacé(e)','Fatigué(e)']},
-  r: {acts:['Prise de tête','Accusation','Marcher sur des œufs','Escalade','Critique','Grosse défensive / Mur','Ton qui monte','Ignoré(e)'],
+  r: {acts:['Prise de tête','Accusation','Marcher sur des œufs','Escalade','Critique','Grosse défensive / Mur','Ton qui monte','Ignoré(e)','Frénésie'],
       feel:['Gros stress','Tendu(e)','Colère','Blessé(e)','Seul(e)','Épuisé(e)']},
   k: {acts:['Mépris','Accusation grave','Insultes / Humiliation','Phrase de trop','Énervement fort','Flagellation / victimisation','Reproches','Laisser tomber','Menace'], moiActs:['Éloignement urgent'],
       feel:['Stress énorme','Rage','Humilié(e)','Abandonné(e)','Dégoûté(e)','Brisé(e)','Peur']}
@@ -302,6 +308,12 @@ const S = {
 const entries = () => S.items.filter(i => i.type === 'e' && i.qui !== 'seul');
 const moods = () => S.items.filter(i => i.type === 'e' && i.qui === 'seul');
 const notes = () => S.items.filter(i => i.type === 'n');
+// énergie du jour : 🔥 à fond / 🧊 au ralenti, compteur par personne (type 'x', un par jour)
+const EN = {f:{e:'🔥', name:'À fond', pos:1.5, neg:0}, i:{e:'🧊', name:'Au ralenti', pos:0, neg:0.75}};
+const energyOf = d => S.items.find(i => i.type === 'x' && i.date === d) || {id:'x-' + d, type:'x', date:d, ts:Date.now(), elle:{f:0,i:0}, moi:{f:0,i:0}};
+function energyIn(from, to, who){ const o = {f:0, i:0}; S.items.filter(i => i.type === 'x' && i.date >= from && i.date <= to).forEach(x => { o.f += (x[who]||{}).f||0; o.i += (x[who]||{}).i||0; }); return o; }
+// ajoute l'énergie (Elle → notre tableau, Moi → mon tableau) au compte des pastilles
+const withEnergy = (c, from, to, who) => { const e = energyIn(from, to, who); c.f = e.f; c.i = e.i; return c; };
 const byDay = d => S.items.filter(i => i.date === d).sort((a,b) => (a.time||'').localeCompare(b.time||'') || a.ts - b.ts);
 // tuiles de base de la couleur + celles qu'il a ajoutées (pour cette couleur, ou avant v1.5 pour toutes)
 const myTiles = (c, kind) => ((S.settings.tiles || {})[c] || {})[kind] || [];
@@ -342,7 +354,7 @@ function counts(list){
   return c;
 }
 function ratioOf(c){
-  const pos = c.w*2 + c.g, neg = c.o + c.r*2;
+  const pos = c.w*2 + c.g + (c.f||0)*EN.f.pos, neg = c.o + c.r*2 + (c.i||0)*EN.i.neg;
   if (!pos && !neg) return null;
   if (!neg) return Infinity;
   return pos/neg;
@@ -436,14 +448,14 @@ function render(){
   const tabs = [['livre','Livre',ICON.book],['noires','Tableau',ICON.board],['stats','Stats',ICON.stats],['jevais','Je vais',ICON.jv],['bilans','Bilans',ICON.bilan]];
   $('#app').innerHTML = `<main id="main"></main>
   <nav class="tabs" aria-label="Navigation">${tabs.map(([k,l,i]) => `<button data-tab="${k}" class="${S.tab===k?'on':''}" ${S.tab===k?'aria-current="page"':''}>${i}${l}</button>`).join('')}</nav>`;
-  $('#app').querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { S.tab = b.dataset.tab; if (S.tab === 'livre') S.day = todayStr(); render(); });
+  $('#app').querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { S.tab = b.dataset.tab; S.open = {}; if (S.tab === 'livre') S.day = todayStr(); render(); });
   const m = $('#main');
   ({livre:renderLivre, noires:renderTableau, stats:renderStats, jevais:renderJeVais, bilans:renderBilans, reglages:renderReglages}[S.tab] || renderLivre)(m);
 }
 
 /* ---------- LIVRE ---------- */
 function entryLine(e){
-  const sel = S.selMode, on = sel && S.sel.has(e.id);
+  const sel = S.selMode, on = sel && S.sel.has(e.id), blocked = sel && !on && !mergeOk(e);
   const parts = [e.time];
   if (e.qui) parts.push(QUI[e.qui]);
   if (e.devant) parts.push(devantLabel());
@@ -454,7 +466,7 @@ function entryLine(e){
   const canRatt = RATT_COLORS.includes(e.color) && !sel && !solo;
   const op = S.open || {};
   const revState = [e.repair ? 'réparé : ' + REPAIR[e.repair].toLowerCase() : '', e.grudge ? `<span class="dot c-${e.grudge}" style="width:10px;height:10px"></span>` : ''].filter(Boolean).join(' · ');
-  return `<div class="entrywrap"><button class="item${on ? ' selon' : ''}" data-entry="${e.id}" ${sel ? `aria-pressed="${on}"` : ''} ${canRatt ? 'style="padding-right:52px"' : ''}>
+  return `<div class="entrywrap"><button class="item${on ? ' selon' : ''}${blocked ? ' blocked' : ''}" data-entry="${e.id}" ${sel ? `aria-pressed="${on}"` : ''} ${blocked ? 'disabled' : ''} ${canRatt ? 'style="padding-right:52px"' : ''}>
     ${sel ? `<span class="selbox" aria-hidden="true">${on ? '✓' : ''}</span>` : ''}<span class="dot c-${e.color}" style="margin-top:3px"></span>
     <span style="flex:1;min-width:0">
       <span class="between meta"><span>${esc(parts.join(' · '))}</span><span>${ph ? ph + ' photo' + (ph>1?'s':'') : ''}</span></span>
@@ -462,6 +474,34 @@ function entryLine(e){
     </span></button>${canRatt ? `<button class="rattbtn" data-ratt="${e.id}" aria-label="Après coup">↺</button>` : ''}
     ${sel ? '' : `<div class="etools"><button data-det="${e.id}" aria-expanded="${op[e.id] === 'd'}">${op[e.id] === 'd' ? '▴' : '▾'} Détails</button>${solo ? '' : `<button data-rev="${e.id}" aria-expanded="${op[e.id] === 'r'}">↩ Revenir dessus ?${revState ? ' <span class="row" style="display:inline-flex;gap:4px;color:var(--muted)">' + revState + '</span>' : ''}</button>`}</div>
     ${op[e.id] === 'd' ? detailsHTML(e) : ''}${op[e.id] === 'r' ? revHTML(e) : ''}`}</div>`;
+}
+// fusion : même couleur, et « Juste moi » seulement avec « Juste moi »
+function mergeOk(e){
+  if (S.selKind !== 'merge' || !S.sel.size) return true;
+  const f = S.items.find(x => x.id === [...S.sel][0]);
+  return !f || (f.color === e.color && (f.qui === 'seul') === (e.qui === 'seul'));
+}
+async function mergeEntries(ids){
+  const l = ids.map(id => S.items.find(x => x.id === id)).filter(Boolean).sort((a,b) => (a.date+a.time).localeCompare(b.date+b.time) || a.ts - b.ts);
+  if (l.length < 2) return;
+  const base = JSON.parse(JSON.stringify(l[0]));
+  const join = (a, b) => [a, b].filter(Boolean).join('\n\n');
+  const mObj = (a, b) => { const o = {...(a||{})}; Object.entries(b||{}).forEach(([k,v]) => { o[k] = o[k] && v && o[k] !== v ? o[k] + ' / ' + v : (o[k] || v || ''); }); return o; };
+  for (const e of l.slice(1)) {
+    base.elle = mObj(base.elle, e.elle); base.moi = mObj(base.moi, e.moi);
+    base.feel = uniq([...(base.feel||[]), ...(e.feel||[])]); base.feelNotes = mObj(base.feelNotes, e.feelNotes);
+    base.elleFeel = uniq([...(base.elleFeel||[]), ...(e.elleFeel||[])]); base.elleFeelNotes = mObj(base.elleFeelNotes, e.elleFeelNotes);
+    base.photos = [...(base.photos||[]), ...(e.photos||[])]; base.ellePhotos = [...(base.ellePhotos||[]), ...(e.ellePhotos||[])];
+    ['what','elleNote','need','repairNote'].forEach(k => { const v = join(base[k], e[k]); if (v) base[k] = v; });
+    if (base.qui !== 'seul' && e.qui && base.qui !== e.qui) base.qui = base.qui ? 'deux' : e.qui;
+    base.devant = base.devant || e.devant; base.air = base.air || e.air;
+    if (e.reacts) base.reacts = {...e.reacts, ...(base.reacts||{})};
+    if (!base.react && e.react) base.react = e.react;
+    ['repair','grudge'].forEach(k => { if (!base[k] && e[k]) base[k] = e[k]; });
+    ['ratt','excuse'].forEach(k => { if (!e[k]) return; if (!base[k]) { base[k] = e[k]; return; } const h = join(base[k].how, e[k].how); if (h) base[k].how = h; if (k === 'ratt') base[k].tiles = {...(e[k].tiles||{}), ...(base[k].tiles||{})}; });
+  }
+  await saveItem(base);
+  for (const e of l.slice(1)) { S.items = S.items.filter(x => x.id !== e.id); await DB.del('items', e.id); }
 }
 // tout le détail d'un moment : une carte par chose qu'elle a faite, puis le général
 function detailsHTML(e){
@@ -491,6 +531,9 @@ function renderLivre(m){
   const t = todayStr();
   const d = S.day;
   if (S.selMode && S.selDay !== d) { S.selMode = false; S.sel = new Set(); }
+  if (S.openDay !== d) { S.open = {}; S.openDay = d; }
+  const ex = energyOf(d);
+  const enTile = (w, k) => { const n = (ex[w]||{})[k] || 0; return `<button class="entile ${k} ${n ? 'on' : ''}" data-en="${w}" data-ek="${k}" style="--lv:${Math.min(n, 8)}" aria-label="${w === 'elle' ? 'Elle' : 'Moi'}, ${EN[k].name.toLowerCase()} : ${n}"><span class="ee">${EN[k].e}</span><b class="${String(n).length > 2 ? 'sm' : ''}">${n || ''}</b></button>`; };
   const list = byDay(d);
   const ents = list.filter(i => i.type === 'e');
   const nts = list.filter(i => i.type === 'n' && !i.tri);
@@ -511,6 +554,9 @@ function renderLivre(m){
   </div>
   ${d !== t ? `<button class="btn block" id="gotoday" style="margin-top:10px">Revenir à aujourd'hui</button>` : ''}
   ${alert ? `<div class="banner"><strong>${esc(alert)}</strong></div>` : ''}
+  <section class="card" aria-label="Énergie du jour"><div class="between"><span class="sub">Énergie du jour</span><small class="hint" style="margin:0">Touche +1 · appui long −1</small></div>
+    <div class="enrow"><span>Elle</span>${enTile('elle','f')}${enTile('elle','i')}</div>
+    <div class="enrow"><span>Moi</span>${enTile('moi','f')}${enTile('moi','i')}</div></section>
   <button class="btn block" id="quick" style="margin-top:12px;height:52px;font-weight:700">⚡ Note rapide</button>
   ${aTrier.length ? `<section class="card" aria-label="À trier"><div class="sub">À trier (${aTrier.length})</div>
     ${aTrier.map(n => `<button class="item" data-tri="${n.id}"><span class="meta" style="min-width:64px">${esc(n.date === t ? n.time : shortDate(n.date) + ' ' + n.time)}</span><span class="txt" style="margin:0;flex:1">${esc(n.text)}</span></button>`).join('')}</section>` : ''}
@@ -527,16 +573,14 @@ function renderLivre(m){
     ${ents.length ? ents.map(entryLine).join('') : `<div class="empty" style="padding:12px 0">Rien de noté pour l'instant.</div>`}
   </section>
   ${ents.length ? (S.selMode
-    ? `<div class="row" style="display:flex;gap:8px;margin-top:10px"><button class="btn" id="selcancel">Annuler</button><button class="btn danger" id="seldel" style="flex:1" ${S.sel.size ? '' : 'disabled'}>Supprimer (${S.sel.size})</button></div>`
-    : `<button class="btn danger block" id="selstart" style="margin-top:10px">Supprimer des moments</button>`) : ''}
-  <section class="card" aria-label="Notes">
-    <div class="between"><span class="sub">Notes</span></div>
+    ? `${S.selKind === 'merge' ? '<small class="hint" style="margin-top:8px">Coche les moments à réunir (même couleur). Ils deviennent un seul moment, à l\'heure du premier.</small>' : ''}<div class="row" style="display:flex;gap:8px;margin-top:10px"><button class="btn" id="selcancel">Annuler</button>${S.selKind === 'merge'
+        ? `<button class="btn primary" id="selmerge" style="flex:1" ${S.sel.size > 1 ? '' : 'disabled'}>Fusionner (${S.sel.size})</button>`
+        : `<button class="btn danger" id="seldel" style="flex:1" ${S.sel.size ? '' : 'disabled'}>Supprimer (${S.sel.size})</button>`}</div>`
+    : `<div class="row" style="display:flex;gap:8px;margin-top:10px">${ents.length > 1 ? '<button class="btn" id="mergestart" style="flex:1">Fusionner des moments</button>' : ''}<button class="btn danger" id="selstart" style="flex:1">Supprimer des moments</button></div>`) : ''}
+  ${nts.length ? `<section class="card" aria-label="Notes">
+    <div class="between"><span class="sub">Anciennes notes</span></div>
     ${nts.map(n => `<button class="item" data-note="${n.id}"><span class="meta" style="min-width:44px">${esc(n.time)}</span><span class="txt" style="margin:0;flex:1">${esc(n.text)}</span></button>`).join('')}
-    <div style="margin-top:10px">
-      <textarea id="newnote" rows="2" placeholder="Écris ce que tu as sur le cœur…"></textarea>
-      <button class="btn block" id="addnote" style="margin-top:8px">Ajouter la note</button>
-    </div>
-  </section>`;
+  </section>` : ''}`;
   $('#prev').onclick = () => { S.day = addDays(d,-1); render(); };
   $('#next').onclick = () => { if (d < t) { S.day = addDays(d,1); render(); } };
   if ($('#gotoday')) $('#gotoday').onclick = () => { S.day = t; render(); };
@@ -546,7 +590,13 @@ function renderLivre(m){
     if (!S.selMode) return openEntry(b.dataset.entry);
     const id = b.dataset.entry; S.sel.has(id) ? S.sel.delete(id) : S.sel.add(id); render();
   });
-  if ($('#selstart')) $('#selstart').onclick = () => { S.selMode = true; S.selDay = d; S.sel = new Set(); render(); };
+  if ($('#selstart')) $('#selstart').onclick = () => { S.selMode = true; S.selKind = 'del'; S.selDay = d; S.sel = new Set(); render(); };
+  if ($('#mergestart')) $('#mergestart').onclick = () => { S.selMode = true; S.selKind = 'merge'; S.selDay = d; S.sel = new Set(); render(); };
+  if ($('#selmerge')) $('#selmerge').onclick = async () => {
+    const n = S.sel.size; if (n < 2) return;
+    if (!confirm(`Réunir ces ${n} moments en un seul ?`)) return;
+    await mergeEntries([...S.sel]); S.selMode = false; S.sel = new Set(); toast(n + ' moments fusionnés'); render();
+  };
   if ($('#selcancel')) $('#selcancel').onclick = () => { S.selMode = false; S.sel = new Set(); render(); };
   if ($('#seldel')) $('#seldel').onclick = async () => {
     const n = S.sel.size; if (!n) return;
@@ -555,7 +605,8 @@ function renderLivre(m){
     S.selMode = false; S.sel = new Set(); toast(n > 1 ? n + ' moments supprimés' : 'Moment supprimé'); render();
   };
   m.querySelectorAll('[data-ratt]').forEach(b => b.onclick = () => openEntry(b.dataset.ratt, null, null, 'ratt'));
-  const tog = (id, k) => { S.open = S.open || {}; S.open[id] = S.open[id] === k ? '' : k; render(); };
+  // un seul « Détails » ou « Revenir dessus » ouvert à la fois
+  const tog = (id, k) => { S.open = (S.open || {})[id] === k ? {} : {[id]: k}; render(); };
   m.querySelectorAll('[data-det]').forEach(b => b.onclick = () => tog(b.dataset.det, 'd'));
   m.querySelectorAll('[data-rev]').forEach(b => b.onclick = () => tog(b.dataset.rev, 'r'));
   const revSave = async (id, f) => { const e = S.items.find(x => x.id === id); const ta = m.querySelector(`[data-rvnote="${id}"]`); if (ta) e.repairNote = ta.value.trim(); f && f(e); await saveItem(e); };
@@ -565,11 +616,14 @@ function renderLivre(m){
   m.querySelectorAll('[data-note]').forEach(b => b.onclick = () => openNote(b.dataset.note));
   $('#quick').onclick = openQuick;
   m.querySelectorAll('[data-tri]').forEach(b => b.onclick = () => openTri(b.dataset.tri));
-  $('#addnote').onclick = async () => {
-    const v = $('#newnote').value.trim(); if (!v) return;
-    await saveItem({id:uid(), type:'n', date:d, time: d === t ? nowTime() : '—', ts:Date.now(), text:v});
-    render();
-  };
+  m.querySelectorAll('[data-en]').forEach(b => { let tm = null, lp = false; const w = b.dataset.en, k = b.dataset.ek;
+    const bump = async dv => { const x = energyOf(d); x[w] = x[w] || {f:0, i:0}; x[w][k] = Math.max(0, (x[w][k]||0) + dv); await saveItem(x); render(); };
+    const stop = () => clearTimeout(tm);
+    b.onpointerdown = () => { lp = false; stop(); tm = setTimeout(() => { lp = true; bump(-1); }, 550); };
+    b.onpointerup = stop; b.onpointerleave = stop; b.onpointercancel = stop;
+    b.oncontextmenu = ev => ev.preventDefault();
+    b.onclick = () => { stop(); if (lp) { lp = false; return; } bump(1); };
+  });
   // balayage gauche/droite pour tourner les pages
   let sx = null;
   m.ontouchstart = ev => { sx = ev.touches[0].clientX; };
@@ -786,8 +840,8 @@ function openEntry(id, color, draft, startAt, prefill){
       ${e.ratt.ok === 'non' ? `<small class="hint" style="margin-top:12px">Noté. Une page dédiée viendra plus tard.</small>` : ''}
       <small class="hint" style="margin-top:12px">Tu pourras aussi l'ajouter plus tard avec ↺ sur le moment, dans le Livre.</small>`;
     }
-    if (k === 'moiSeul') return `${ORDER.map(c => `<div class="row" style="gap:8px;margin:16px 0 8px"><span class="dot c-${c}"></span><span class="sub">${COLORS[c].name}</span></div>
-      <div class="chips">${withSelected(moodTiles(c), c === e.color ? e.feel.filter(t => !ORDER.some(x => moodTiles(x).includes(t))) : []).map(t => `<button class="chip ${e.feel.includes(t) ? 'on' : ''}" data-feel="moi" data-tile="${esc(t)}" aria-pressed="${e.feel.includes(t)}">${esc(t)}${e.feelNotes[t] ? ' ✎' : ''}</button>`).join('')}
+    if (k === 'moiSeul') return `${[e.color].map(c => `<div class="row" style="gap:8px;margin:16px 0 8px"><span class="dot c-${c}"></span><span class="sub">${COLORS[c].name}</span></div>
+      <div class="chips">${withSelected(moodTiles(c), e.feel).map(t => `<button class="chip ${e.feel.includes(t) ? 'on' : ''}" data-feel="moi" data-tile="${esc(t)}" aria-pressed="${e.feel.includes(t)}">${esc(t)}${e.feelNotes[t] ? ' ✎' : ''}</button>`).join('')}
       <button class="chip add" data-addmood="${c}">+</button></div>`).join('')}
       ${preview('feel', 'moi', Object.fromEntries(e.feel.map(t => [t, e.feelNotes[t] || ''])))}
       <label class="q" for="ewhat">Petite note</label>
@@ -971,7 +1025,7 @@ function renderTableau(m){
   const from = seg === 'semaine' ? mondayOf(t) : `${month}-01`;
   const to = seg === 'semaine' ? addDays(mondayOf(t), 6) : ymd(new Date(y, mo, 0));
   const list = inRange(src(), from, to);
-  const c = counts(list), r = ratioOf(c), v = mine ? moodVerdict(r) : verdict(r);
+  const c = withEnergy(counts(list), from, to, mine ? 'moi' : 'elle'), r = ratioOf(c), v = mine ? moodVerdict(r) : verdict(r);
   const topMood = topN(feelCounts(list), 5);
   const blacks = list.filter(e => e.color === 'k').sort((a,b) => (b.date+b.time).localeCompare(a.date+a.time));
   const short = e => { const tg = (e.qui === 'seul' ? (e.feel||[]) : Object.keys(e.elle||{})).slice(0,2).join(', '); const tx = e.elleNote || e.what || ''; return [tg, tx.length > 50 ? tx.slice(0,50) + '…' : tx].filter(Boolean).join(' · ') || 'Pas de texte'; };
@@ -1051,7 +1105,7 @@ function renderStats(m){
     body.querySelectorAll('[data-day]').forEach(b => b.onclick = () => { S.day = b.dataset.day; S.tab = 'livre'; render(); });
   } else {
     const list = inRange(entries(), from, to);
-    const c = counts(list);
+    const c = withEnergy(counts(list), from, to, 'elle');
     const r = ratioOf(c);
     const elle = tagCounts(list, 'elle'), moi = tagCounts(list, 'moi');
     const qui = {elle:0, moi:0, deux:0}; list.forEach(e => { if (e.qui) qui[e.qui]++; });
@@ -1147,7 +1201,7 @@ function periodsMonths(){
 function summaryText(from, to, kind){
   const list = inRange(entries(), from, to);
   if (!list.length) return "Rien de noté sur cette période.";
-  const c = counts(list); const r = ratioOf(c);
+  const c = withEnergy(counts(list), from, to, 'elle'); const r = ratioOf(c);
   const good = c.w + c.g, bad = c.o + c.r;
   const lines = [];
   lines.push(`${good} bon${good>1?'s':''} moment${good>1?'s':''}${c.w ? ' (dont ' + c.w + ' parfait' + (c.w>1?'s':'') + ')' : ''}, ${bad} difficile${bad>1?'s':''}, ${c.k} limite${c.k>1?'s':''} franchie${c.k>1?'s':''}.`);
@@ -1164,7 +1218,7 @@ function summaryText(from, to, kind){
   const len = Math.round((parseYmd(to) - parseYmd(from)) / 86400000) + 1;
   const pFrom = kind === 'mois' ? ymd(new Date(parseYmd(from).getFullYear(), parseYmd(from).getMonth()-1, 1)) : addDays(from, -len);
   const pTo = addDays(from, -1);
-  const pr = ratioOf(counts(inRange(entries(), pFrom, pTo)));
+  const pr = ratioOf(withEnergy(counts(inRange(entries(), pFrom, pTo)), pFrom, pTo, 'elle'));
   if (pr !== null && r !== null && r !== Infinity && pr !== Infinity) lines.push(r > pr + 0.2 ? 'Mieux que la période précédente.' : r < pr - 0.2 ? 'Moins bien que la période précédente.' : 'À peu près pareil que la période précédente.');
   return lines.join(' ');
 }
@@ -1176,9 +1230,10 @@ function verdict(r){ return r === null ? {t:'Pas encore de données', col:'var(-
 function bilanBlocks(from, to, kind){
   const list = inRange(entries(), from, to);
   const jl = jvInRange(from, to);
-  if (!list.length && !jl.length && !inRange(moods(), from, to).length) return '<div class="empty" style="margin-top:8px">Rien de noté sur cette période.</div>';
-  const c = counts(list), r = ratioOf(c), v = verdict(r);
+  if (!list.length && !jl.length && !inRange(moods(), from, to).length && !S.items.some(i => i.type === 'x' && i.date >= from && i.date <= to)) return '<div class="empty" style="margin-top:8px">Rien de noté sur cette période.</div>';
+  const c = withEnergy(counts(list), from, to, 'elle'), r = ratioOf(c), v = verdict(r);
   const rows = [];
+  const enRow = w => { const e = energyIn(from, to, w); return [e.f ? '🔥 ' + e.f : '', e.i ? '🧊 ' + e.i : ''].filter(Boolean).join(' &nbsp;'); };
   const row = (k, val) => val && rows.push(`<div class="brow"><span>${k}</span><span>${val}</span></div>`);
   const fmtTop = (m2, n) => topN(m2, n).map(([k,x]) => esc(k) + (x > 1 ? ' ×' + x : '')).join(' · ');
   row('Chez elle', fmtTop(tagCounts(list,'elle'), 3));
@@ -1192,10 +1247,11 @@ function bilanBlocks(from, to, kind){
   if (ap.length) row('Après coup', `rattrapée ${list.filter(e => e.ratt && e.ratt.ok === 'oui').length}/${ap.length} · excuses ${list.filter(e => e.excuse && e.excuse.v === 'oui').length}/${ap.length}`);
   const ml = inRange(moods(), from, to);
   if (ml.length) row('Mon humeur', ORDER.filter(k => counts(ml)[k]).map(k => `<span class="dot c-${k}" style="width:10px;height:10px"></span> ${counts(ml)[k]}`).join(' &nbsp;') + (topN(feelCounts(ml), 3).length ? '<br>' + topN(feelCounts(ml), 3).map(([k]) => esc(k)).join(' · ') : ''));
+  if (enRow('elle') || enRow('moi')) row('Énergie', [enRow('elle') ? 'Elle ' + enRow('elle') : '', enRow('moi') ? 'Moi ' + enRow('moi') : ''].filter(Boolean).join('<br>'));
   if (jl.length) row('Je vais', ['elle','moi'].map(w => { const l = jl.filter(j => j.who === w); return `${w === 'elle' ? 'Elle' : 'Moi'} ${l.filter(j => j.status === 'done').length} fait · ${l.filter(j => j.status === 'drop').length} en l'air`; }).join('<br>'));
   const len = Math.round((parseYmd(to) - parseYmd(from)) / 86400000) + 1;
   const pFrom = kind === 'mois' ? ymd(new Date(parseYmd(from).getFullYear(), parseYmd(from).getMonth()-1, 1)) : addDays(from, -len);
-  const pr = ratioOf(counts(inRange(entries(), pFrom, addDays(from, -1))));
+  const pr = ratioOf(withEnergy(counts(inRange(entries(), pFrom, addDays(from, -1))), pFrom, addDays(from, -1), 'elle'));
   if (pr !== null && r !== null && r !== Infinity && pr !== Infinity) row('Tendance', r > pr + 0.2 ? '↗ mieux qu\'avant' : r < pr - 0.2 ? '↘ moins bien qu\'avant' : '→ pareil qu\'avant');
   return `${pillsHTML(c)}
     ${list.length ? `<div class="row" style="gap:10px;margin-top:10px;align-items:baseline"><span style="font-size:30px;font-weight:800;color:${v.col}">${fmtRatio(r)}</span><span class="sub">pour 1 · ${v.t}</span></div>` : ''}
@@ -1223,7 +1279,7 @@ function periodText(from, to, label){
   L.push('## Résumé automatique');
   L.push(summaryText(from, to, S.bilanSeg));
   L.push('');
-  L.push('Légende : ⚪ parfait · 🟢 bon moment · 🟠 tendu · 🔴 difficile · ⚫ limite franchie (elle est allée trop loin)');
+  L.push('Légende : ⚪ parfait · 🟢 bon moment · 🟠 tendu · 🔴 difficile · ⚫ limite franchie (elle est allée trop loin) · 🔥 à fond depuis le réveil (compte 1,5 en positif) · 🧊 au ralenti (compte 0,75 en négatif)');
   L.push('');
   L.push('## Détail jour par jour');
   let d = from; const sym = {w:'⚪',g:'🟢',o:'🟠',r:'🔴',k:'⚫'};
@@ -1232,6 +1288,7 @@ function periodText(from, to, label){
     if (items.length) {
       L.push(''); L.push(`### ${longDate(d)}`);
       items.forEach(i => {
+        if (i.type === 'x') { ['elle','moi'].forEach(w => { const x = i[w]||{}; if (x.f || x.i) L.push(`- Énergie ${w === 'elle' ? 'elle' : 'moi'} : ${x.f ? '🔥 à fond ×' + x.f : ''}${x.f && x.i ? ', ' : ''}${x.i ? '🧊 au ralenti ×' + x.i : ''}`); }); return; }
         if (i.type === 'n') { L.push(`- ${i.time} · ${i.tri ? 'Note rapide (pas encore triée)' : 'Note'} : ${i.text}`); return; }
         L.push(`- ${i.time} ${sym[i.color]} ${COLORS[i.color].name}${i.qui ? ' · Qui : ' + QUI[i.qui] : ''}${i.devant ? ' · ' + devantLabel() : ''}`);
         const fmt = o => Object.entries(o||{}).map(([k,v]) => v ? `${k} (${v})` : k).join(', ');
@@ -1454,7 +1511,7 @@ async function restoreAll(file){
 
 /* ---------- boot ---------- */
 // version de l'appli : affichée dans Réglages, sert à détecter une mise à jour
-const APP_VERSION = '1.14';
+const APP_VERSION = '1.15';
 // à l'ouverture, on compare avec la version en ligne ; si elle est plus récente, on recharge (une seule fois)
 async function checkUpdate(){
   try {

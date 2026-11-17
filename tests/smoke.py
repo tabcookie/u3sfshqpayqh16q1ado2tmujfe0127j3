@@ -176,9 +176,8 @@ with sync_playwright() as p:
     pg.click('#selstart'); pg.locator('[data-entry]').nth(0).click(); pg.click('#selcancel'); pg.wait_for_timeout(100)
     check(pg.locator('[data-entry]').count() == n0 - 2, 'sélection : « Annuler » a supprimé quelque chose')
 
-    # 5. note
-    pg.fill('#newnote', 'Note de test'); pg.click('#addnote'); pg.wait_for_timeout(200)
-    check(pg.locator('[data-note]').count() == 1, 'note non ajoutée')
+    # 5. plus de cadre « Écris ce que tu as sur le cœur »
+    check(pg.locator('#newnote').count() == 0, 'le cadre de note doit avoir disparu')
 
     # 4g. ma réaction (Qui ? Elle) : sa propre couleur et ses tuiles
     pg.click('[data-new="r"]'); pg.click('[data-qui="elle"]'); pg.wait_for_timeout(100)
@@ -251,13 +250,46 @@ with sync_playwright() as p:
     pg.click('[data-new="r"]'); pg.click('[data-qui="seul"]'); pg.wait_for_timeout(100)
     check(pg.inner_text('.steptitle').startswith('Juste moi'), 'Juste moi : page absente')
     check(pg.locator('[data-goto]').count() == 2, 'Juste moi : une seule page attendue')
-    pg.click('.chip[data-feel="moi"][data-tile="Joie"]'); pg.click('#bubbleOk')
+    check(pg.locator('.chip[data-feel="moi"][data-tile="Joie"]').count() == 0, 'Juste moi : une émotion d\'une autre couleur est proposée')
+    check(pg.locator('[data-addmood]').count() == 1, 'Juste moi : un seul « + » attendu')
+    pg.click('.chip[data-feel="moi"][data-tile="Colère"]'); pg.click('#bubbleOk')
     pg.click('.chip[data-feel="moi"][data-tile="Tristesse"]'); pg.click('#bubbleOk')
     pg.fill('#ewhat', 'humeur test'); pg.click('#eok'); pg.wait_for_timeout(300)
     check(pg.evaluate("entries().length") == nb and pg.evaluate("moods().length") == 1, 'Juste moi compté dans le couple')
     pg.click('[data-tab="noires"]'); pg.click('[data-who="moi"]'); pg.wait_for_timeout(200)
     check('Mon humeur' in pg.inner_text('main') and 'Tristesse' in pg.inner_text('main'), 'Mon tableau incomplet')
     pg.click('[data-who="nous"]'); pg.click('[data-tab="livre"]'); pg.wait_for_timeout(200)
+
+    # 4k. un seul « Détails » ouvert à la fois
+    dets = pg.locator('[data-det]')
+    if dets.count() >= 2:
+        dets.nth(0).click(); pg.wait_for_timeout(100); pg.locator('[data-det]').nth(1).click(); pg.wait_for_timeout(100)
+        check(pg.locator('.dpanel').count() == 1, 'plusieurs détails ouverts en même temps')
+        pg.locator('[data-det]').nth(1).click(); pg.wait_for_timeout(100)
+
+    # 4l. fusion de moments (même couleur)
+    pg.evaluate("(async () => { const d = todayStr(); for (const [t, n] of [['08:00','a'],['09:00','b']]) await saveItem({id:'fz'+n, type:'e', color:'o', qui:'elle', date:d, time:t, ts:Date.now(), elle:{Oubli:n}, moi:{}, feel:[], feelNotes:{}, elleNote:'note '+n, photos:[], ellePhotos:[]}); render(); })()")
+    pg.wait_for_timeout(300)
+    n1 = pg.evaluate("entries().length")
+    pg.click('#mergestart'); pg.click('[data-entry="fza"]'); pg.wait_for_timeout(100)
+    check(pg.locator('.item.blocked').count() >= 1, 'fusion : les moments d\'une autre couleur doivent être grisés')
+    pg.click('[data-entry="fzb"]'); pg.click('#selmerge'); pg.wait_for_timeout(300)
+    m = pg.evaluate("entries().find(e => e.id === 'fza')")
+    check(pg.evaluate("entries().length") == n1 - 1 and m and m['elle']['Oubli'] == 'a / b' and m['elleNote'] == 'note a\n\nnote b', 'fusion incorrecte')
+
+    # 4m. énergie du jour 🔥 / 🧊 : compteur, appui long, ratio
+    r0 = pg.evaluate("ratioOf(withEnergy(counts(inRange(entries(), todayStr(), todayStr())), todayStr(), todayStr(), 'elle'))")
+    for _ in range(3): pg.click('[data-en="elle"][data-ek="f"]'); pg.wait_for_timeout(120)
+    pg.click('[data-en="moi"][data-ek="i"]'); pg.wait_for_timeout(120)
+    check(pg.inner_text('[data-en="elle"][data-ek="f"] b') == '3', '🔥 : compteur faux')
+    t = pg.locator('[data-en="elle"][data-ek="f"]').bounding_box()
+    pg.mouse.move(t['x']+20, t['y']+20); pg.mouse.down(); pg.wait_for_timeout(800); pg.mouse.up(); pg.wait_for_timeout(200)
+    check(pg.inner_text('[data-en="elle"][data-ek="f"] b') == '2', '🔥 : l\'appui long doit retirer 1')
+    r1 = pg.evaluate("ratioOf(withEnergy(counts(inRange(entries(), todayStr(), todayStr())), todayStr(), todayStr(), 'elle'))")
+    check(r0 is not None and r1 > r0, '🔥 ne compte pas dans le ratio')
+    check(pg.evaluate("energyIn(todayStr(), todayStr(), 'moi').i") == 1, '🧊 moi non compté')
+    check(pg.evaluate("TILES.r.acts.includes('Frénésie')"), 'tuile rouge « Frénésie » absente')
+    check('🔥' in pg.evaluate("periodText(todayStr(), todayStr(), 'test')"), 'énergie absente de l\'export')
 
     # 6. onglets
     for tab in ['noires', 'stats', 'bilans']:

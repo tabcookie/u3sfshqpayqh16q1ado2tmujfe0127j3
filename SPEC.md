@@ -29,12 +29,16 @@ Journal personnel pour noter les moments d'une relation et y voir clair. Soutien
 - Pastille validée : modifier le contenu, changer la couleur, supprimer.
 
 ## Juste moi
-4e choix dans « Qui ? » : une seule page « comment je me sens » (émotions classiques réparties sur les 5 couleurs, « + » par couleur, bulle commentaire) + petite note. Pas d'Après coup, pas de Revenir dessus. Jamais compté dans les stats du couple : vu dans « Mon tableau » et la ligne « Mon humeur » des bilans.
+4e choix dans « Qui ? » : une seule page « comment je me sens » (seulement les émotions classiques de la couleur choisie, « + » pour en ajouter, bulle commentaire) + petite note. Pas d'Après coup, pas de Revenir dessus. Jamais compté dans les stats du couple : vu dans « Mon tableau » et la ligne « Mon humeur » des bilans.
 
 ## Livre
 Une page par jour, datée, qui change toute seule. Pastilles en haut, liste des moments, notes séparées avec l'heure automatique.
 - Chaque moment : 2 lignes (heure · Qui · photos / note, sinon 2 premières tuiles « +n ») ; « ▾ Détails » déplie tout par événement (une carte par chose qu'elle a faite : Elle / Moi / Après, puis Sa note, Je me sens, Ma note, Besoin, Après coup, Réparé) ; « ↩ Revenir dessus ? » (toutes couleurs) : Ça s'est réparé ? Oui · Non · Pas vraiment + note, Tu lui en veux ? 🟢🟠🔴⚫.
 
+- Un seul « Détails » ou « Revenir dessus » ouvert à la fois ; tout se referme en changeant de jour ou d'onglet.
+- Sous le cadre Moments : « Fusionner des moments » → cocher au moins 2 moments de la même couleur (« Juste moi » seulement avec « Juste moi », les autres grisés) → un seul moment à l'heure du premier (tuiles, notes bout à bout, photos ; Elle + Moi = Les deux).
+- Plus de cadre « Écris ce que tu as sur le cœur » (remplacé par « Juste moi ») ; les anciennes notes restent visibles sur leurs jours.
+- Énergie du jour, en haut de la page : 🔥 À fond depuis le réveil / 🧊 Au ralenti, pour Elle et pour Moi, compteurs façon 2048 (touche +1, appui long −1, sans limite). État de la personne, compatible avec toutes les pastilles. Elle → Notre tableau, Moi → Mon tableau : 🔥 = 1,5 en positif (un peu plus qu'une verte), 🧊 = 0,75 en négatif (un peu moins qu'une orange). L'énergie de rush (colère maîtrisée, ménage pendant 4 h) se note avec la tuile rouge « Frénésie ».
 - Sous le cadre Moments : bouton « Supprimer des moments » → case à cocher devant chaque moment → « Supprimer (n) » / « Annuler » → confirmation « C'est définitif ».
 
 - ⚡ Note rapide en haut du Livre : on écrit sur le coup (heure auto), elle va dans « À trier » (tous jours confondus). En la touchant : choisir une couleur → la pastille s'ouvre avec le texte dans « Note sur elle », à la même date et heure ; une fois validée, la note disparaît de « À trier ». On peut aussi la garder ou la supprimer.

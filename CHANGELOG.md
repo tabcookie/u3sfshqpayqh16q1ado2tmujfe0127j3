@@ -1,5 +1,9 @@
 # Journal des versions
 
+## v1.14 — 17 nov. 2026
+- Numéro de version affiché en bas des Réglages.
+- À l'ouverture (et au retour après 2 min), l'appli vérifie la version en ligne et se recharge toute seule si elle est plus récente (une seule fois, sans toucher aux données).
+
 ## v1.13 — 17 nov. 2026
 - « Ma réaction » : « ▾ Sa note » (sa note sur la tuile) et « + Ma note » repliés par défaut.
 - Détails d'un moment rangés par événement : une carte par chose qu'elle a faite (Elle / Moi / Après), puis Sa note, Je me sens, Ma note, Besoin, Après coup, Réparé.

@@ -1412,7 +1412,7 @@ function renderReglages(m){
   <div class="card"><div style="font-weight:700">Code</div>
     <button class="btn block" id="chpin" style="margin-top:10px">Changer mon code</button>
     <button class="btn block" id="lock" style="margin-top:8px">Verrouiller maintenant</button></div>
-  <small class="hint" style="margin:14px 0">Umoral garde tout sur ce téléphone. Rien n'est envoyé sur Internet.</small>`;
+  <small class="hint" style="margin:14px 0">Umoral garde tout sur ce téléphone. Rien n'est envoyé sur Internet.<br>Version ${APP_VERSION}</small>`;
   $('#back').onclick = () => { S.tab = 'livre'; render(); };
   $('#child').onchange = async ev => { S.settings.childName = ev.target.value.trim(); await saveSettings(); toast('Enregistré'); };
   $('#rem').onchange = async ev => { S.settings.reminder = ev.target.value; await saveSettings(); render(); };
@@ -1453,7 +1453,22 @@ async function restoreAll(file){
 }
 
 /* ---------- boot ---------- */
+// version de l'appli : affichée dans Réglages, sert à détecter une mise à jour
+const APP_VERSION = '1.14';
+// à l'ouverture, on compare avec la version en ligne ; si elle est plus récente, on recharge (une seule fois)
+async function checkUpdate(){
+  try {
+    if (!/^https?:/.test(location.protocol)) return false;
+    const r = await fetch(location.pathname + '?check=' + Date.now(), {cache:'no-store'});
+    const m = (await r.text()).match(/const APP_VERSION = '([^']+)'/);
+    if (!m || m[1] === APP_VERSION || sessionStorage.getItem('umoralReload') === m[1]) return false;
+    sessionStorage.setItem('umoralReload', m[1]);
+    location.replace(location.pathname + '?v=' + m[1]);
+    return true;
+  } catch(_) { return false; }
+}
 (async function boot(){
+  if (await checkUpdate()) return;
   try {
     await DB.open();
     try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch(_) {}
@@ -1472,8 +1487,11 @@ async function restoreAll(file){
   // reverrouille après 2 minutes en arrière-plan
   let hiddenAt = 0;
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden) hiddenAt = Date.now();
-    else if (S.unlocked && hiddenAt && Date.now() - hiddenAt > 120000) { S.unlocked = false; document.querySelectorAll('.overlay').forEach(o => o.remove()); render(); }
+    if (document.hidden) { hiddenAt = Date.now(); return; }
+    const long = hiddenAt && Date.now() - hiddenAt > 120000; hiddenAt = 0;
+    if (!long) return;
+    if (S.unlocked) { S.unlocked = false; document.querySelectorAll('.overlay').forEach(o => o.remove()); render(); }
+    checkUpdate();
   });
 })();
 </script>

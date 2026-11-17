@@ -60,6 +60,9 @@ Résumé automatique par semaine et par mois, en blocs (pastilles + nombre, rati
 - « Pense à toi » dans l'appli : 3 jours mauvais de suite ou 2 noires en 7 jours.
 - Rappel du soir à heure réglable : impossible seul en appli web → automatisation Raccourcis expliquée dans les réglages.
 
+## Mises à jour
+`APP_VERSION` dans index.html (à changer à chaque version), affiché dans Réglages. À l'ouverture et au retour après 2 min, comparaison avec la version en ligne et rechargement automatique si plus récente.
+
 ## Sauvegarde
 Bouton « Sauvegarder tout » → menu de partage → Enregistrer dans Fichiers (dossier Umoral). Restauration possible.
 - Tous les fichiers exportés ont un nom clair et daté (sauvegardes et bilans).
